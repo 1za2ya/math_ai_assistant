@@ -8,7 +8,6 @@
   text-align: left;
 }
 
-.home__input,
 .home__panel,
 .home__chat {
   padding: 20px;
@@ -33,23 +32,6 @@
   margin: 0;
   font-size: 1.125rem;
   color: #1f2937;
-}
-
-.home__problem-textarea {
-  width: 100%;
-  padding: 12px;
-  resize: vertical;
-  font: inherit;
-  color: inherit;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  box-sizing: border-box;
-}
-
-.home__problem-textarea:focus {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
 }
 
 .home__workspace {
@@ -78,7 +60,6 @@
     gap: 16px;
   }
 
-  .home__input,
   .home__panel,
   .home__chat {
     padding: 16px;

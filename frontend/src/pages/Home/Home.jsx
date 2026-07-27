@@ -1,20 +1,10 @@
 import './Home.css'
+import InputArea from '../../components/InputArea/InputArea'
 
 function Home() {
   return (
     <main className="home">
-      <section className="home__input" aria-labelledby="problem-input-title">
-        <div className="home__section-heading">
-          <p className="home__eyebrow">問題入力</p>
-          <h2 id="problem-input-title">解きたい問題を入力</h2>
-        </div>
-        <textarea
-          className="home__problem-textarea"
-          aria-label="数学の問題"
-          placeholder="例：2x + 5 = 17 を解いてください"
-          rows="5"
-        />
-      </section>
+      <InputArea />
 
       <div className="home__workspace">
         <section className="home__panel home__steps" aria-labelledby="solution-steps-title">
