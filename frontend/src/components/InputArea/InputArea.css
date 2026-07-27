@@ -1,8 +1,8 @@
 .input-area {
   padding: 20px;
-  color: #1f2937;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
 }
 
@@ -14,7 +14,7 @@
   margin-bottom: 4px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-primary);
   letter-spacing: 0.08em;
 }
 
@@ -44,14 +44,14 @@
   resize: vertical;
   font: inherit;
   color: inherit;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-input);
   border-radius: 8px;
   box-sizing: border-box;
 }
 
 .input-area__textarea:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -67,30 +67,30 @@
   font: inherit;
   font-size: 0.875rem;
   font-weight: 700;
-  color: #1e40af;
+  color: var(--color-primary-dark);
   cursor: pointer;
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background-color: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-border);
   border-radius: 8px;
 }
 
 .input-area__button:hover {
-  background-color: #dbeafe;
+  background-color: var(--color-primary-subtle-hover);
 }
 
 .input-area__button:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .input-area__button--primary {
-  color: #ffffff;
-  background-color: #2563eb;
-  border-color: #2563eb;
+  color: var(--color-text-inverse);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .input-area__button--primary:hover {
-  background-color: #1d4ed8;
+  background-color: var(--color-primary-hover);
 }
 
 @media (max-width: 600px) {
