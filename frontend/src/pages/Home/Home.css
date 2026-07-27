@@ -1,0 +1,86 @@
+.home {
+  display: grid;
+  gap: 20px;
+  flex: 1;
+  padding: 24px;
+  color: #1f2937;
+  background-color: #f8fafc;
+  text-align: left;
+}
+
+.home__input,
+.home__panel,
+.home__chat {
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.home__section-heading {
+  margin-bottom: 16px;
+}
+
+.home__eyebrow {
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+}
+
+.home h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #1f2937;
+}
+
+.home__problem-textarea {
+  width: 100%;
+  padding: 12px;
+  resize: vertical;
+  font: inherit;
+  color: inherit;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.home__problem-textarea:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.home__workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.home__panel,
+.home__chat {
+  min-height: 180px;
+}
+
+.home__placeholder {
+  color: #64748b;
+}
+
+@media (max-width: 720px) {
+  .home {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .home__workspace {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .home__input,
+  .home__panel,
+  .home__chat {
+    padding: 16px;
+  }
+}

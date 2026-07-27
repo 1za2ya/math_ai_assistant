@@ -1,13 +1,11 @@
 import Header from './components/Header/Header'
+import Home from './pages/Home/Home'
 
 function App() {
-  const handleMenuClick = () => {
-    console.log('Menu clicked')
-  }
-
   return (
     <>
-      <Header onMenuClick={handleMenuClick} />
+      <Header />
+      <Home />
     </>
   )
 }
