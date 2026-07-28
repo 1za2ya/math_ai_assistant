@@ -1,1 +1,109 @@
+.input-area {
+  padding: 20px;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
 
+.input-area__heading {
+  margin-bottom: 16px;
+}
+
+.input-area__eyebrow {
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 0.08em;
+}
+
+.input-area h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.input-area__fields {
+  display: grid;
+  gap: 16px;
+}
+
+.input-area__field {
+  display: grid;
+  gap: 8px;
+}
+
+.input-area__label {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.input-area__textarea {
+  width: 100%;
+  padding: 12px;
+  resize: vertical;
+  font: inherit;
+  color: inherit;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-input);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.input-area__textarea:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.input-area__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.input-area__button {
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  cursor: pointer;
+  background-color: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+}
+
+.input-area__button:hover {
+  background-color: var(--color-primary-subtle-hover);
+}
+
+.input-area__button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.input-area__button--primary {
+  color: var(--color-text-inverse);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.input-area__button--primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+@media (max-width: 600px) {
+  .input-area {
+    padding: 16px;
+  }
+
+  .input-area__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .input-area__button {
+    width: 100%;
+  }
+}
