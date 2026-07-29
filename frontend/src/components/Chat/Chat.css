@@ -1,1 +1,76 @@
+.chat {
+  min-height: 180px;
+  padding: 20px;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-surface-subtle);
+  border-radius: 12px;
+}
 
+.chat__heading {
+  margin-bottom: 16px;
+}
+
+.chat__eyebrow {
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 0.08em;
+}
+
+.chat h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.chat__messages {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.chat__message {
+  display: grid;
+  gap: 4px;
+  max-width: min(80%, 680px);
+}
+
+.chat__message--user {
+  justify-self: end;
+}
+
+.chat__sender {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.chat__message--user .chat__sender {
+  text-align: right;
+}
+
+.chat__bubble {
+  padding: 12px 14px;
+  color: var(--color-text-primary);
+  background-color: var(--color-primary-subtle);
+  border-radius: 12px 12px 12px 4px;
+}
+
+.chat__message--user .chat__bubble {
+  color: var(--color-text-inverse);
+  background-color: var(--color-primary);
+  border-radius: 12px 12px 4px;
+}
+
+@media (max-width: 720px) {
+  .chat {
+    padding: 16px;
+  }
+
+  .chat__message {
+    max-width: 90%;
+  }
+}

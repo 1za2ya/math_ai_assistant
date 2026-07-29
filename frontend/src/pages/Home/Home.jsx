@@ -1,4 +1,5 @@
 import './Home.css'
+import Chat from '../../components/Chat/Chat'
 import InputArea from '../../components/InputArea/InputArea'
 
 function Home() {
@@ -24,13 +25,7 @@ function Home() {
         </section>
       </div>
 
-      <section className="home__chat" aria-labelledby="chat-title">
-        <div className="home__section-heading">
-          <p className="home__eyebrow">AIチャット</p>
-          <h2 id="chat-title">質問する</h2>
-        </div>
-        <p className="home__placeholder">AIとの会話がここに表示されます。</p>
-      </section>
+      <Chat />
     </main>
   )
 }
