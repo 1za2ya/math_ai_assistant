@@ -28,7 +28,8 @@ def generate_first_hint(question: str) -> str:
     except Exception as error:
         raise RuntimeError("Gemini API request failed") from error
 
-    if not response.text:
+    hint = response.text.strip() if response.text else ""
+    if not hint:
         raise RuntimeError("Gemini API returned an empty response")
 
-    return response.text
+    return hint
