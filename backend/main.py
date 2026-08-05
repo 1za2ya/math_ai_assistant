@@ -1,7 +1,8 @@
 import logging
+from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, StringConstraints
 
 from ai_service import generate_first_hint
 
@@ -11,7 +12,7 @@ app = FastAPI()
 
 
 class ChatRequest(BaseModel):
-    question: str = Field(min_length=1)
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class ChatResponse(BaseModel):
