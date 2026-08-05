@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from constants import MIN_STEPS, MAX_STEPS
 from prompt import MATH_HINT_INSTRUCTIONS
 
 load_dotenv()
@@ -49,7 +50,7 @@ def generate_solution(question: str) -> dict[str, list[str] | str]:
         hint = solution["hint"]
         if (
             not isinstance(steps, list)
-            or not 4 <= len(steps) <= 6
+            or not MIN_STEPS <= len(steps) <= MAX_STEPS
             or not all(isinstance(step, str) and step.strip() for step in steps)
         ):
             raise ValueError("Gemini API returned invalid steps")
