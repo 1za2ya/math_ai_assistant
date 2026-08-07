@@ -1,1 +1,131 @@
+.sidebar-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear 200ms;
+}
 
+.sidebar-layer--open {
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.sidebar__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  cursor: pointer;
+  background-color: var(--color-overlay);
+  border: 0;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.sidebar-layer--open .sidebar__overlay {
+  opacity: 1;
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(82vw, 320px);
+  padding: 20px;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  box-shadow: 8px 0 24px var(--color-panel-shadow);
+  box-sizing: border-box;
+  transform: translateX(-100%);
+  transition: transform 200ms ease;
+}
+
+.sidebar-layer--open .sidebar {
+  transform: translateX(0);
+}
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar__title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.sidebar__close-button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  font: inherit;
+  font-size: 1.5rem;
+  color: inherit;
+  cursor: pointer;
+  background-color: transparent;
+  border: 0;
+  border-radius: 8px;
+}
+
+.sidebar__close-button:hover,
+.sidebar__menu-button:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.sidebar__close-button:focus-visible,
+.sidebar__menu-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.sidebar__menu {
+  display: grid;
+  gap: 6px;
+  padding: 16px 0 0;
+  margin: 0;
+  list-style: none;
+}
+
+.sidebar__menu-button {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: left;
+  cursor: pointer;
+  background-color: transparent;
+  border: 0;
+  border-radius: 8px;
+}
+
+.sidebar__menu li:first-child .sidebar__menu-button {
+  color: var(--color-primary-dark);
+  background-color: var(--color-primary-subtle);
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: min(88vw, 320px);
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-layer,
+  .sidebar__overlay,
+  .sidebar {
+    transition-duration: 0s;
+  }
+}

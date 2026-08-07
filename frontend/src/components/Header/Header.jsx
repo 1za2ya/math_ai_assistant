@@ -1,12 +1,14 @@
 import './Header.css'
 
-function Header({ onMenuClick }) {
+function Header({ onMenuClick, isMenuOpen }) {
   return (
     <header className="header">
       <button
         type="button"
         className="header__menu-button"
-        aria-label="メニューを開く"
+        aria-label={isMenuOpen ? 'メニューを閉じる' : 'メニューを開く'}
+        aria-controls="app-sidebar"
+        aria-expanded={isMenuOpen}
         onClick={onMenuClick}
       >
         <span aria-hidden="true">☰</span>
