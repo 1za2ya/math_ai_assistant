@@ -1,20 +1,15 @@
 import './Home.css'
 import Chat from '../../components/Chat/Chat'
 import InputArea from '../../components/InputArea/InputArea'
+import SolutionSteps from '../../components/SolutionSteps/SolutionSteps'
 
-function Home() {
+function Home({ steps, currentStep }) {
   return (
     <main className="home">
       <InputArea />
 
       <div className="home__workspace">
-        <section className="home__panel home__steps" aria-labelledby="solution-steps-title">
-          <div className="home__section-heading">
-            <p className="home__eyebrow">解法ステップ</p>
-            <h2 id="solution-steps-title">解き方</h2>
-          </div>
-          <p className="home__placeholder">ここに解法のステップが表示されます。</p>
-        </section>
+        <SolutionSteps steps={steps} currentStep={currentStep} />
 
         <section className="home__panel home__diagram" aria-labelledby="diagram-title">
           <div className="home__section-heading">

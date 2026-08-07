@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ai_service import generate_first_hint
+from ai_service import generate_solution
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,8 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    message: str
+    steps: list[str]
+    hint: str
 
 
 @app.get("/")
@@ -26,7 +27,7 @@ def read_root():
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     try:
-        hint = generate_first_hint(request.question)
+        solution = generate_solution(request.question)
     except RuntimeError:
         logger.exception("Hint generation is unavailable")
         raise HTTPException(
@@ -34,4 +35,4 @@ def chat(request: ChatRequest) -> ChatResponse:
             detail="現在ヒントを生成できません。時間をおいて再度お試しください。",
         ) from None
 
-    return ChatResponse(message=hint)
+    return ChatResponse(**solution)
