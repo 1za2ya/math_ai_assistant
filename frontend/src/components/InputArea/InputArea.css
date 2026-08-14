@@ -93,6 +93,17 @@
   background-color: var(--color-primary-hover);
 }
 
+.input-area__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.input-area__error {
+  margin: 12px 0 0;
+  color: var(--color-status-error);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 600px) {
   .input-area {
     padding: 16px;

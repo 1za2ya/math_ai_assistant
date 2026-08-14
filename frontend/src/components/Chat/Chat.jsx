@@ -1,19 +1,6 @@
 import './Chat.css'
 
-const messages = [
-  {
-    id: 'user-1',
-    role: 'user',
-    content: '2x + 5 = 17 の解き方を教えてください。',
-  },
-  {
-    id: 'assistant-1',
-    role: 'assistant',
-    content: 'まず、両辺から 5 を引いてみましょう。すると 2x = 12 になります。',
-  },
-]
-
-function Chat() {
+function Chat({ messages }) {
   return (
     <section className="chat" aria-labelledby="chat-title">
       <div className="chat__heading">
@@ -22,6 +9,9 @@ function Chat() {
       </div>
 
       <ol className="chat__messages" aria-label="会話履歴">
+        {messages.length === 0 && (
+          <li className="chat__empty">問題を送信すると、ここに会話が表示されます。</li>
+        )}
         {messages.map((message) => (
           <li className={`chat__message chat__message--${message.role}`} key={message.id}>
             <p className="chat__sender">{message.role === 'assistant' ? 'AI' : 'あなた'}</p>
