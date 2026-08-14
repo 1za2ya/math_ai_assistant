@@ -1,6 +1,13 @@
 import './InputArea.css'
 
-function InputArea() {
+function InputArea({
+  question,
+  onQuestionChange,
+  onMoreHint,
+  isHintLoading,
+  hasReachedMaxHint,
+  error,
+}) {
   return (
     <section className="input-area" aria-labelledby="input-area-title">
       <div className="input-area__heading">
@@ -18,6 +25,8 @@ function InputArea() {
             className="input-area__textarea"
             placeholder="例：2x + 5 = 17 を解いてください"
             rows="5"
+            value={question}
+            onChange={(event) => onQuestionChange(event.target.value)}
           />
         </div>
 
@@ -38,13 +47,20 @@ function InputArea() {
         <button className="input-area__button input-area__button--primary" type="button">
           送信
         </button>
-        <button className="input-area__button" type="button">
-          もっとヒント
+        <button
+          className="input-area__button"
+          type="button"
+          disabled={isHintLoading || hasReachedMaxHint}
+          onClick={onMoreHint}
+        >
+          {isHintLoading ? '取得中…' : hasReachedMaxHint ? 'ヒント上限' : 'もっとヒント'}
         </button>
         <button className="input-area__button" type="button">
           分かった！
         </button>
       </div>
+
+      {error && <p className="input-area__error" role="alert">{error}</p>}
     </section>
   )
 }
