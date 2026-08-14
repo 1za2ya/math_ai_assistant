@@ -1,14 +1,21 @@
 import json
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
 from constants import MIN_STEPS, MAX_STEPS
-from prompt import MATH_HINT_INSTRUCTIONS, MORE_HINT_INSTRUCTIONS, build_more_hint_input
+from prompt import (
+    MATH_HINT_INSTRUCTIONS,
+    STEP_DETAIL_INSTRUCTIONS,
+    STEP_HINT_INSTRUCTIONS,
+    build_step_detail_input,
+    build_step_hint_input,
+)
 
-load_dotenv()
+load_dotenv(Path(__file__).with_name(".env"))
 
 MODEL = "gemini-3.6-flash"
 
@@ -86,8 +93,19 @@ def generate_solution(question: str) -> dict[str, list[str] | str]:
     }
 
 
-def generate_more_hint(question: str, hint_level: int, steps: list[str]) -> str:
+def generate_step_hint(question: str, steps: list[str], current_step: int) -> str:
     return _generate_text(
-        contents=build_more_hint_input(question, hint_level, steps),
-        system_instruction=MORE_HINT_INSTRUCTIONS,
+        contents=build_step_hint_input(question, steps, current_step),
+        system_instruction=STEP_HINT_INSTRUCTIONS,
+    )
+
+
+def generate_step_detail(
+    question: str, steps: list[str], current_step: int, detail_question: str
+) -> str:
+    return _generate_text(
+        contents=build_step_detail_input(
+            question, steps, current_step, detail_question
+        ),
+        system_instruction=STEP_DETAIL_INSTRUCTIONS,
     )

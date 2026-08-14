@@ -1,110 +1,231 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import './Home.css'
 import Chat from '../../components/Chat/Chat'
 import InputArea from '../../components/InputArea/InputArea'
 import SolutionSteps from '../../components/SolutionSteps/SolutionSteps'
+import { initialLearningProgress, learningProgressReducer } from './learningProgress'
 
-const MAX_HINT_LEVEL = 3
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
+const MIN_SOLUTION_STEPS = 4
+const MAX_SOLUTION_STEPS = 6
 
-function Home({ steps, currentStep }) {
+async function postJson(path, body, signal) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  })
+
+  if (!response.ok) throw new Error(`API request failed: ${response.status}`)
+  return response.json()
+}
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function hasValidSolutionSteps(steps) {
+  return (
+    Array.isArray(steps) &&
+    steps.length >= MIN_SOLUTION_STEPS &&
+    steps.length <= MAX_SOLUTION_STEPS &&
+    steps.every(isNonEmptyString)
+  )
+}
+
+function Home({ initialSteps }) {
   const [question, setQuestion] = useState('')
-  const [hintLevel, setHintLevel] = useState(0)
+  const [detailQuestion, setDetailQuestion] = useState('')
+  const [solutionSteps, setSolutionSteps] = useState(initialSteps)
   const [messages, setMessages] = useState([])
-  const [isHintLoading, setIsHintLoading] = useState(false)
-  const [hintError, setHintError] = useState('')
-  const activeHintRequest = useRef(null)
+  const [loadingAction, setLoadingAction] = useState(null)
+  const [error, setError] = useState('')
+  const [progress, dispatchProgress] = useReducer(
+    learningProgressReducer,
+    initialLearningProgress,
+  )
+  const activeRequest = useRef(null)
+  const messageId = useRef(0)
 
-  useEffect(() => {
-    return () => {
-      const request = activeHintRequest.current
-      activeHintRequest.current = null
-      request?.abort()
-    }
-  }, [])
+  useEffect(() => () => activeRequest.current?.abort(), [])
 
-  const handleQuestionChange = (value) => {
-    activeHintRequest.current?.abort()
-    activeHintRequest.current = null
-    setQuestion(value)
-    setHintLevel(0)
-    setMessages([])
-    setIsHintLoading(false)
-    setHintError('')
+  const nextMessage = (role, content) => {
+    messageId.current += 1
+    return { id: `message-${messageId.current}`, role, content }
   }
 
-  const handleMoreHint = async () => {
+  const beginRequest = (action) => {
+    const controller = new AbortController()
+    activeRequest.current = controller
+    setLoadingAction(action)
+    setError('')
+    return controller
+  }
+
+  const finishRequest = (controller) => {
+    if (activeRequest.current === controller) {
+      activeRequest.current = null
+      setLoadingAction(null)
+    }
+  }
+
+  const resetProblem = () => {
+    activeRequest.current?.abort()
+    activeRequest.current = null
+    setDetailQuestion('')
+    setSolutionSteps(initialSteps)
+    setMessages([])
+    setLoadingAction(null)
+    setError('')
+    dispatchProgress({ type: 'reset' })
+  }
+
+  const handleQuestionChange = (value) => {
+    setQuestion(value)
+    resetProblem()
+  }
+
+  const handleProblemSubmit = async () => {
     const normalizedQuestion = question.trim()
-    if (!normalizedQuestion) {
-      setHintError('問題を入力してください。')
-      return
-    }
+    if (!normalizedQuestion || activeRequest.current) return
 
-    if (activeHintRequest.current || isHintLoading || hintLevel >= MAX_HINT_LEVEL) {
-      return
-    }
-
-    const nextHintLevel = hintLevel + 1
-    const request = new AbortController()
-    activeHintRequest.current = request
-    setIsHintLoading(true)
-    setHintError('')
-
+    const request = beginRequest('problem')
     try {
-      const response = await fetch(`${API_BASE_URL}/hint`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: normalizedQuestion,
-          hint_level: nextHintLevel,
-        }),
-        signal: request.signal,
-      })
-
-      if (!response.ok) {
-        throw new Error('Hint request failed')
+      const data = await postJson('/chat', { question: normalizedQuestion }, request.signal)
+      if (activeRequest.current !== request) return
+      if (
+        !hasValidSolutionSteps(data.steps) ||
+        !isNonEmptyString(data.hint)
+      ) {
+        throw new Error('Invalid solution response')
       }
 
-      const data = await response.json()
-      const hint = typeof data.hint === 'string' ? data.hint.trim() : ''
-      if (!hint || data.hint_level !== nextHintLevel) {
+      setSolutionSteps(data.steps.map((step) => step.trim()))
+      setMessages([
+        nextMessage('user', normalizedQuestion),
+        nextMessage('assistant', data.hint.trim()),
+      ])
+      dispatchProgress({ type: 'start' })
+    } catch (requestError) {
+      if (requestError.name !== 'AbortError' && activeRequest.current === request) {
+        setError('問題を送信できませんでした。時間をおいて再度お試しください。')
+      }
+    } finally {
+      finishRequest(request)
+    }
+  }
+
+  const handleNextHint = async () => {
+    const nextStep = progress.currentStep + 1
+    if (
+      !progress.hasStarted ||
+      progress.userMarkedUnderstood ||
+      nextStep >= solutionSteps.length ||
+      activeRequest.current
+    ) {
+      return
+    }
+
+    const request = beginRequest('next')
+    try {
+      const data = await postJson(
+        '/hint',
+        {
+          question: question.trim(),
+          steps: solutionSteps,
+          current_step: nextStep,
+        },
+        request.signal,
+      )
+      if (activeRequest.current !== request) return
+      if (!isNonEmptyString(data.hint) || data.current_step !== nextStep) {
         throw new Error('Invalid hint response')
       }
 
       setMessages((currentMessages) => [
         ...currentMessages,
-        {
-          id: `assistant-hint-${data.hint_level}`,
-          role: 'assistant',
-          content: hint,
-        },
+        nextMessage('assistant', data.hint.trim()),
       ])
-      setHintLevel(data.hint_level)
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        setHintError('ヒントを取得できませんでした。時間をおいて再度お試しください。')
+      dispatchProgress({ type: 'advance', stepCount: solutionSteps.length })
+    } catch (requestError) {
+      if (requestError.name !== 'AbortError' && activeRequest.current === request) {
+        setError('次のヒントを取得できませんでした。時間をおいて再度お試しください。')
       }
     } finally {
-      if (activeHintRequest.current === request) {
-        activeHintRequest.current = null
-        setIsHintLoading(false)
-      }
+      finishRequest(request)
     }
   }
+
+  const handleDetailSubmit = async () => {
+    const normalizedDetail = detailQuestion.trim()
+    if (!progress.hasStarted || !normalizedDetail || activeRequest.current) return
+
+    const requestedStep = progress.currentStep
+    const request = beginRequest('detail')
+    try {
+      const data = await postJson(
+        '/detail',
+        {
+          question: question.trim(),
+          steps: solutionSteps,
+          current_step: requestedStep,
+          detail_question: normalizedDetail,
+        },
+        request.signal,
+      )
+      if (activeRequest.current !== request) return
+      if (!isNonEmptyString(data.explanation) || data.current_step !== requestedStep) {
+        throw new Error('Invalid detail response')
+      }
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        nextMessage('user', normalizedDetail),
+        nextMessage('assistant', data.explanation.trim()),
+      ])
+      setDetailQuestion('')
+      dispatchProgress({ type: 'details_received' })
+    } catch (requestError) {
+      if (requestError.name !== 'AbortError' && activeRequest.current === request) {
+        setError('詳しい説明を取得できませんでした。時間をおいて再度お試しください。')
+      }
+    } finally {
+      finishRequest(request)
+    }
+  }
+
+  const handleUnderstood = () => {
+    if (!progress.hasStarted || activeRequest.current) return
+    dispatchProgress({ type: 'mark_understood' })
+    setError('')
+  }
+
+  const isLastStep =
+    progress.hasStarted && progress.currentStep >= solutionSteps.length - 1
+  const isLoading = loadingAction !== null
 
   return (
     <main className="home">
       <InputArea
         question={question}
+        detailQuestion={detailQuestion}
         onQuestionChange={handleQuestionChange}
-        onMoreHint={handleMoreHint}
-        isHintLoading={isHintLoading}
-        hasReachedMaxHint={hintLevel >= MAX_HINT_LEVEL}
-        error={hintError}
+        onDetailQuestionChange={setDetailQuestion}
+        onProblemSubmit={handleProblemSubmit}
+        onDetailSubmit={handleDetailSubmit}
+        onNextHint={handleNextHint}
+        onUnderstood={handleUnderstood}
+        loadingAction={loadingAction}
+        isLoading={isLoading}
+        hasStarted={progress.hasStarted}
+        isLastStep={isLastStep}
+        isUnderstood={progress.userMarkedUnderstood}
+        error={error}
       />
 
       <div className="home__workspace">
-        <SolutionSteps steps={steps} currentStep={currentStep} />
+        <SolutionSteps steps={solutionSteps} currentStep={progress.currentStep} />
 
         <section className="home__panel home__diagram" aria-labelledby="diagram-title">
           <div className="home__section-heading">

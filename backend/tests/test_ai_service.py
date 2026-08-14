@@ -38,11 +38,13 @@ def test_generate_solution_normalizes_structured_response(monkeypatch):
     assert client.models.last_request["config"].response_mime_type == "application/json"
 
 
-def test_generate_more_hint_normalizes_plain_text(monkeypatch):
+def test_generate_step_hint_uses_selected_step(monkeypatch):
     client = ClientStub("  次に両辺から5を引くとどうなるでしょうか？  ")
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(ai_service.genai, "Client", lambda api_key: client)
 
-    hint = ai_service.generate_more_hint("2x + 5 = 17", 2, [])
+    steps = ["条件を整理する", "式を立てる", "式を変形する", "結果を確認する"]
+    hint = ai_service.generate_step_hint("2x + 5 = 17", steps, 1)
 
     assert hint == "次に両辺から5を引くとどうなるでしょうか？"
+    assert "現在のステップ:\n式を立てる" in client.models.last_request["contents"]

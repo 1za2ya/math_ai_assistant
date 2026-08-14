@@ -104,6 +104,16 @@
   font-size: 0.875rem;
 }
 
+.input-area__completion {
+  padding: 10px 12px;
+  margin: 12px 0 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  background-color: var(--color-primary-subtle);
+  border-radius: 8px;
+}
+
 @media (max-width: 600px) {
   .input-area {
     padding: 16px;
