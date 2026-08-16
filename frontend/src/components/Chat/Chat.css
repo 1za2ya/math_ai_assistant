@@ -32,6 +32,10 @@
   list-style: none;
 }
 
+.chat__empty {
+  color: var(--color-text-muted);
+}
+
 .chat__message {
   display: grid;
   gap: 4px;
