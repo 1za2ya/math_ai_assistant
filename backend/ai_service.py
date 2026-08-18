@@ -71,12 +71,11 @@ def _generate_text(
             contents=contents,
             config=types.GenerateContentConfig(**config),
         )
+        text = response.text.strip() if response.text else ""
+        if not text:
+            raise ValueError("Gemini API returned an empty response")
     except Exception as error:
         raise RuntimeError("Gemini API request failed") from error
-
-    text = response.text.strip() if response.text else ""
-    if not text:
-        raise RuntimeError("Gemini API returned an empty response")
 
     return text
 

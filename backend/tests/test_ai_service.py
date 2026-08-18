@@ -74,3 +74,27 @@ def test_whitespace_only_response_is_rejected(monkeypatch):
             ["条件を整理する", "式を立てる", "式を変形する", "結果を確認する"],
             1,
         )
+
+
+def test_response_text_error_is_normalized(monkeypatch):
+    class BrokenResponse:
+        @property
+        def text(self):
+            raise ValueError("response parsing failed")
+
+    class BrokenModels:
+        def generate_content(self, **request):
+            return BrokenResponse()
+
+    class BrokenClient:
+        models = BrokenModels()
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(ai_service.genai, "Client", lambda api_key: BrokenClient())
+
+    with pytest.raises(RuntimeError, match="Gemini API request failed"):
+        ai_service.generate_step_hint(
+            "2x + 5 = 17",
+            ["条件を整理する", "式を立てる", "式を変形する", "結果を確認する"],
+            1,
+        )

@@ -155,10 +155,12 @@ function Home({ initialSteps }) {
         throw new Error('Invalid hint response')
       }
 
+      const userMessage = nextMessage('user', '次の解法ステップのヒントを教えてください。')
+      const assistantMessage = nextMessage('assistant', data.hint.trim())
       setMessages((currentMessages) => [
         ...currentMessages,
-        nextMessage('user', '次の解法ステップのヒントを教えてください。'),
-        nextMessage('assistant', data.hint.trim()),
+        userMessage,
+        assistantMessage,
       ])
       dispatchProgress({ type: 'advance', stepCount: solutionSteps.length })
     } catch (requestError) {
@@ -193,10 +195,12 @@ function Home({ initialSteps }) {
         throw new Error('Invalid detail response')
       }
 
+      const userMessage = nextMessage('user', normalizedDetail)
+      const assistantMessage = nextMessage('assistant', data.explanation.trim())
       setMessages((currentMessages) => [
         ...currentMessages,
-        nextMessage('user', normalizedDetail),
-        nextMessage('assistant', data.explanation.trim()),
+        userMessage,
+        assistantMessage,
       ])
       setDetailQuestion('')
       dispatchProgress({ type: 'details_received' })
