@@ -1,47 +1,76 @@
-from types import SimpleNamespace
+import json
 
-import ai_service
 import pytest
 
+import ai_service
 
-def test_gemini_receives_history_in_role_order(monkeypatch):
-    captured = {}
 
-    class FakeModels:
-        def generate_content(self, **kwargs):
-            captured.update(kwargs)
-            return SimpleNamespace(text="次に、両辺から3を引くと何が残るか考えよう。")
+class ModelsStub:
+    def __init__(self, response_text):
+        self.response_text = response_text
+        self.last_request = None
 
-    class FakeClient:
-        models = FakeModels()
+    def generate_content(self, **request):
+        self.last_request = request
+        return type("ResponseStub", (), {"text": self.response_text})()
 
+
+class ClientStub:
+    def __init__(self, response_text):
+        self.models = ModelsStub(response_text)
+
+
+def configure_client(monkeypatch, response_text):
+    client = ClientStub(response_text)
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-    monkeypatch.setattr(ai_service.genai, "Client", lambda api_key: FakeClient())
+    monkeypatch.setattr(ai_service.genai, "Client", lambda api_key: client)
+    return client
 
+
+def test_generate_solution_normalizes_structured_response(monkeypatch):
+    response_text = json.dumps(
+        {
+            "steps": [" 条件を整理する ", " 式を立てる ", " 式を解く ", " 確認する "],
+            "hint": " 最初に条件を整理してみましょう。 ",
+        }
+    )
+    client = configure_client(monkeypatch, response_text)
+
+    solution = ai_service.generate_solution("2x + 5 = 17")
+
+    assert solution == {
+        "steps": ["条件を整理する", "式を立てる", "式を解く", "確認する"],
+        "hint": "最初に条件を整理してみましょう。",
+    }
+    assert client.models.last_request["config"].response_mime_type == "application/json"
+
+
+def test_generate_step_hint_passes_history_and_selected_step(monkeypatch):
+    client = configure_client(
+        monkeypatch, "  次に両辺から5を引くとどうなるでしょうか？  "
+    )
+    steps = ["条件を整理する", "式を立てる", "式を変形する", "結果を確認する"]
     history = [
-        {"role": "user", "content": "2x + 3 = 7"},
-        {"role": "assistant", "content": "まず定数項に注目しよう。"},
+        {"role": "user", "content": "2x + 5 = 17"},
+        {"role": "assistant", "content": "まず条件を整理しましょう。"},
     ]
-    result = ai_service.generate_more_hint("2x + 3 = 7", 2, [], history)
 
-    contents = captured["contents"]
+    hint = ai_service.generate_step_hint("2x + 5 = 17", steps, 1, history)
+
+    contents = client.models.last_request["contents"]
     assert [content.role for content in contents] == ["user", "model", "user"]
     assert contents[0].parts[0].text == history[0]["content"]
     assert contents[1].parts[0].text == history[1]["content"]
-    assert "今回のヒント段階: 2" in contents[2].parts[0].text
-    assert result == "次に、両辺から3を引くと何が残るか考えよう。"
+    assert "現在のステップ:\n式を立てる" in contents[2].parts[0].text
+    assert hint == "次に両辺から5を引くとどうなるでしょうか？"
 
 
 def test_whitespace_only_response_is_rejected(monkeypatch):
-    class FakeModels:
-        def generate_content(self, **kwargs):
-            return SimpleNamespace(text="   ")
-
-    class FakeClient:
-        models = FakeModels()
-
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-    monkeypatch.setattr(ai_service.genai, "Client", lambda api_key: FakeClient())
+    configure_client(monkeypatch, "   ")
 
     with pytest.raises(RuntimeError):
-        ai_service.generate_more_hint("2x + 3 = 7", 2, [], [])
+        ai_service.generate_step_hint(
+            "2x + 5 = 17",
+            ["条件を整理する", "式を立てる", "式を変形する", "結果を確認する"],
+            1,
+        )

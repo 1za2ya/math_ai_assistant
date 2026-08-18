@@ -5,12 +5,25 @@ function InputArea({
   detailQuestion,
   onQuestionChange,
   onDetailQuestionChange,
-  onSubmit,
-  onMoreHint,
+  onProblemSubmit,
+  onDetailSubmit,
+  onNextHint,
+  onUnderstood,
+  loadingAction,
   isLoading,
-  canRequestMoreHint,
+  hasStarted,
+  isLastStep,
+  isUnderstood,
   error,
 }) {
+  const nextHintLabel = isUnderstood
+    ? '問題を完了しました'
+    : isLastStep
+      ? '最後のステップです'
+      : loadingAction === 'next'
+        ? '取得中…'
+        : '次のヒント'
+
   return (
     <section className="input-area" aria-labelledby="input-area-title">
       <div className="input-area__heading">
@@ -40,7 +53,7 @@ function InputArea({
           <textarea
             id="detail-question"
             className="input-area__textarea"
-            placeholder="分からない部分や、詳しく知りたいことを入力してください"
+            placeholder="現在のステップで分からない部分を入力してください"
             rows="3"
             value={detailQuestion}
             onChange={(event) => onDetailQuestionChange(event.target.value)}
@@ -52,24 +65,42 @@ function InputArea({
         <button
           className="input-area__button input-area__button--primary"
           type="button"
-          onClick={onSubmit}
           disabled={isLoading || !question.trim()}
+          onClick={onProblemSubmit}
         >
-          {isLoading ? '通信中…' : '送信'}
+          {loadingAction === 'problem' ? '送信中…' : '問題を送信'}
         </button>
         <button
           className="input-area__button"
           type="button"
-          onClick={onMoreHint}
-          disabled={isLoading || !canRequestMoreHint}
+          disabled={isLoading || !hasStarted || !detailQuestion.trim() || isUnderstood}
+          onClick={onDetailSubmit}
         >
-          もっとヒント
+          {loadingAction === 'detail' ? '送信中…' : '詳しく送信'}
         </button>
-        <button className="input-area__button" type="button">
-          分かった！
+        <button
+          className="input-area__button"
+          type="button"
+          disabled={isLoading || !hasStarted || isLastStep || isUnderstood}
+          onClick={onNextHint}
+        >
+          {nextHintLabel}
+        </button>
+        <button
+          className="input-area__button"
+          type="button"
+          disabled={isLoading || !hasStarted || isUnderstood}
+          onClick={onUnderstood}
+        >
+          {isUnderstood ? '理解済み' : '分かった！'}
         </button>
       </div>
 
+      {isUnderstood && (
+        <p className="input-area__completion" role="status">
+          この問題を理解済みにしました。
+        </p>
+      )}
       {error && (
         <p className="input-area__error" role="alert">
           {error}

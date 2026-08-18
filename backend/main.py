@@ -2,16 +2,10 @@ import logging
 from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
-from ai_service import generate_more_hint, generate_solution
-from constants import (
-    MAX_HINT_LEVEL,
-    MAX_HISTORY_MESSAGES,
-    MAX_MESSAGE_LENGTH,
-    MAX_STEPS,
-    MIN_HINT_LEVEL,
-)
+from ai_service import generate_solution, generate_step_detail, generate_step_hint
+from constants import MAX_HISTORY_MESSAGES, MAX_MESSAGE_LENGTH, MAX_STEPS, MIN_STEPS
 
 logger = logging.getLogger(__name__)
 
@@ -40,25 +34,40 @@ class ChatResponse(BaseModel):
     hint: str
 
 
-class HintRequest(BaseModel):
+class StepContextRequest(BaseModel):
     question: ValidatedText
-    hint_level: int = Field(ge=MIN_HINT_LEVEL, le=MAX_HINT_LEVEL)
-    steps: list[ValidatedText] = Field(default_factory=list, max_length=MAX_STEPS)
+    steps: list[ValidatedText] = Field(min_length=MIN_STEPS, max_length=MAX_STEPS)
+    current_step: int = Field(strict=True, ge=0)
     history: list[ConversationMessage] = Field(
         default_factory=list, max_length=MAX_HISTORY_MESSAGES
     )
 
+    @model_validator(mode="after")
+    def validate_current_step(self):
+        if self.current_step >= len(self.steps):
+            raise ValueError("current_step must reference an existing step")
+        return self
 
-class HintResponse(BaseModel):
+
+class StepHintResponse(BaseModel):
     hint: str
-    hint_level: int
+    current_step: int
+
+
+class StepDetailRequest(StepContextRequest):
+    detail_question: ValidatedText
+
+
+class StepDetailResponse(BaseModel):
+    explanation: str
+    current_step: int
 
 
 def _history_as_dicts(history: list[ConversationMessage]) -> list[dict[str, str]]:
     return [message.model_dump() for message in history]
 
 
-def _generation_unavailable() -> HTTPException:
+def generation_unavailable() -> HTTPException:
     logger.exception("Hint generation is unavailable")
     return HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -78,21 +87,39 @@ def chat(request: ChatRequest) -> ChatResponse:
             request.question, _history_as_dicts(request.history)
         )
     except RuntimeError:
-        raise _generation_unavailable() from None
+        raise generation_unavailable() from None
 
     return ChatResponse(**solution)
 
 
-@app.post("/hint", response_model=HintResponse)
-def more_hint(request: HintRequest) -> HintResponse:
+@app.post("/hint", response_model=StepHintResponse)
+def step_hint(request: StepContextRequest) -> StepHintResponse:
     try:
-        hint = generate_more_hint(
+        hint = generate_step_hint(
             request.question,
-            request.hint_level,
             request.steps,
+            request.current_step,
             _history_as_dicts(request.history),
         )
     except RuntimeError:
-        raise _generation_unavailable() from None
+        raise generation_unavailable() from None
 
-    return HintResponse(hint=hint, hint_level=request.hint_level)
+    return StepHintResponse(hint=hint, current_step=request.current_step)
+
+
+@app.post("/detail", response_model=StepDetailResponse)
+def step_detail(request: StepDetailRequest) -> StepDetailResponse:
+    try:
+        explanation = generate_step_detail(
+            request.question,
+            request.steps,
+            request.current_step,
+            request.detail_question,
+            _history_as_dicts(request.history),
+        )
+    except RuntimeError:
+        raise generation_unavailable() from None
+
+    return StepDetailResponse(
+        explanation=explanation, current_step=request.current_step
+    )

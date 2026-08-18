@@ -28,7 +28,7 @@ function App() {
       <Header onMenuClick={toggleSidebar} isMenuOpen={isSidebarOpen} />
       <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
       <StatusBar />
-      <Home steps={demoSteps} currentStep={1} />
+      <Home initialSteps={demoSteps} />
     </>
   )
 }
