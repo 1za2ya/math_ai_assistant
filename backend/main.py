@@ -18,9 +18,23 @@ class ChatRequest(BaseModel):
     question: NonEmptyText
 
 
+class DiagramResponse(BaseModel):
+    needed: bool = Field(strict=True)
+    type: NonEmptyText | None
+    data: dict[str, object] | None
+
+    @model_validator(mode="after")
+    def validate_optional_data(self):
+        if not self.needed and (self.type is not None or self.data is not None):
+            raise ValueError("type and data must be null when diagram is not needed")
+        return self
+
+
 class ChatResponse(BaseModel):
     steps: list[str]
     hint: str
+    calculation_steps: list[NonEmptyText] = Field(min_length=1)
+    diagram: DiagramResponse
 
 
 class StepContextRequest(BaseModel):
