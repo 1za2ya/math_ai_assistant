@@ -10,7 +10,7 @@ function Chat({ messages }) {
 
       <div aria-live="polite">
         {messages.length === 0 ? (
-          <p className="chat__empty">取得したヒントがここに表示されます。</p>
+          <p className="chat__empty">問題を送信すると、ここに会話が表示されます。</p>
         ) : (
           <ol className="chat__messages" aria-label="会話履歴">
             {messages.map((message) => (

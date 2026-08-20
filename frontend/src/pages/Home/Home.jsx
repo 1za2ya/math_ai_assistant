@@ -8,6 +8,7 @@ import { initialLearningProgress, learningProgressReducer } from './learningProg
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
 const MIN_SOLUTION_STEPS = 4
 const MAX_SOLUTION_STEPS = 6
+const MAX_HISTORY_MESSAGES = 20
 
 async function postJson(path, body, signal) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -19,6 +20,12 @@ async function postJson(path, body, signal) {
 
   if (!response.ok) throw new Error(`API request failed: ${response.status}`)
   return response.json()
+}
+
+function toApiHistory(messages) {
+  return messages
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map(({ role, content }) => ({ role, content }))
 }
 
 function isNonEmptyString(value) {
@@ -92,12 +99,16 @@ function Home({ initialSteps }) {
 
     const request = beginRequest('problem')
     try {
-      const data = await postJson('/chat', { question: normalizedQuestion }, request.signal)
+      const data = await postJson(
+        '/chat',
+        {
+          question: normalizedQuestion,
+          history: toApiHistory(messages),
+        },
+        request.signal,
+      )
       if (activeRequest.current !== request) return
-      if (
-        !hasValidSolutionSteps(data.steps) ||
-        !isNonEmptyString(data.hint)
-      ) {
+      if (!hasValidSolutionSteps(data.steps) || !isNonEmptyString(data.hint)) {
         throw new Error('Invalid solution response')
       }
 
@@ -135,6 +146,7 @@ function Home({ initialSteps }) {
           question: question.trim(),
           steps: solutionSteps,
           current_step: nextStep,
+          history: toApiHistory(messages),
         },
         request.signal,
       )
@@ -143,9 +155,12 @@ function Home({ initialSteps }) {
         throw new Error('Invalid hint response')
       }
 
+      const userMessage = nextMessage('user', '次の解法ステップのヒントを教えてください。')
+      const assistantMessage = nextMessage('assistant', data.hint.trim())
       setMessages((currentMessages) => [
         ...currentMessages,
-        nextMessage('assistant', data.hint.trim()),
+        userMessage,
+        assistantMessage,
       ])
       dispatchProgress({ type: 'advance', stepCount: solutionSteps.length })
     } catch (requestError) {
@@ -171,6 +186,7 @@ function Home({ initialSteps }) {
           steps: solutionSteps,
           current_step: requestedStep,
           detail_question: normalizedDetail,
+          history: toApiHistory(messages),
         },
         request.signal,
       )
@@ -179,10 +195,12 @@ function Home({ initialSteps }) {
         throw new Error('Invalid detail response')
       }
 
+      const userMessage = nextMessage('user', normalizedDetail)
+      const assistantMessage = nextMessage('assistant', data.explanation.trim())
       setMessages((currentMessages) => [
         ...currentMessages,
-        nextMessage('user', normalizedDetail),
-        nextMessage('assistant', data.explanation.trim()),
+        userMessage,
+        assistantMessage,
       ])
       setDetailQuestion('')
       dispatchProgress({ type: 'details_received' })
