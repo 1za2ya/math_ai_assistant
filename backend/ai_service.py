@@ -25,10 +25,31 @@ SOLUTION_SCHEMA = {
         "steps": {
             "type": "array",
             "items": {"type": "string"},
+            "minItems": MIN_STEPS,
+            "maxItems": MAX_STEPS,
         },
         "hint": {"type": "string"},
+        "calculation_steps": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+        },
+        "diagram": {
+            "type": "object",
+            "properties": {
+                "needed": {"type": "boolean"},
+                "type": {"type": ["string", "null"]},
+                "data": {
+                    "type": ["object", "null"],
+                    "additionalProperties": True,
+                },
+            },
+            "required": ["needed", "type", "data"],
+            "additionalProperties": False,
+        },
     },
-    "required": ["steps", "hint"],
+    "required": ["steps", "hint", "calculation_steps", "diagram"],
+    "additionalProperties": False,
 }
 
 
@@ -65,7 +86,15 @@ def _generate_text(
     return text
 
 
-def generate_solution(question: str) -> dict[str, list[str] | str]:
+def _normalize_text_list(value: object, field_name: str) -> list[str]:
+    if not isinstance(value, list) or not value or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
+        raise ValueError(f"Gemini API returned invalid {field_name}")
+    return [item.strip() for item in value]
+
+
+def generate_solution(question: str) -> dict[str, object]:
     response_text = _generate_text(
         contents=question,
         system_instruction=MATH_HINT_INSTRUCTIONS,
@@ -74,22 +103,48 @@ def generate_solution(question: str) -> dict[str, list[str] | str]:
 
     try:
         solution = json.loads(response_text)
-        steps = solution["steps"]
+        steps = _normalize_text_list(solution["steps"], "steps")
         hint = solution["hint"]
-        if (
-            not isinstance(steps, list)
-            or not MIN_STEPS <= len(steps) <= MAX_STEPS
-            or not all(isinstance(step, str) and step.strip() for step in steps)
-        ):
+        calculation_steps = _normalize_text_list(
+            solution["calculation_steps"], "calculation_steps"
+        )
+        diagram = solution["diagram"]
+
+        if not MIN_STEPS <= len(steps) <= MAX_STEPS:
             raise ValueError("Gemini API returned invalid steps")
         if not isinstance(hint, str) or not hint.strip():
             raise ValueError("Gemini API returned an invalid hint")
+        if not isinstance(diagram, dict):
+            raise ValueError("Gemini API returned an invalid diagram")
+
+        diagram_needed = diagram["needed"]
+        diagram_type = diagram["type"]
+        diagram_data = diagram["data"]
+        if not isinstance(diagram_needed, bool):
+            raise ValueError("Gemini API returned an invalid diagram flag")
+        if diagram_type is not None and (
+            not isinstance(diagram_type, str) or not diagram_type.strip()
+        ):
+            raise ValueError("Gemini API returned an invalid diagram type")
+        if diagram_data is not None and not isinstance(diagram_data, dict):
+            raise ValueError("Gemini API returned invalid diagram data")
+        if diagram_needed:
+            if diagram_type is None or diagram_data is None:
+                raise ValueError("Gemini API returned incomplete diagram data")
+        elif diagram_type is not None or diagram_data is not None:
+            raise ValueError("Gemini API returned unnecessary diagram data")
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
         raise RuntimeError("Gemini API returned an invalid solution") from error
 
     return {
-        "steps": [step.strip() for step in steps],
+        "steps": steps,
         "hint": hint.strip(),
+        "calculation_steps": calculation_steps,
+        "diagram": {
+            "needed": diagram_needed,
+            "type": diagram_type.strip() if diagram_type is not None else None,
+            "data": diagram_data,
+        },
     }
 
 

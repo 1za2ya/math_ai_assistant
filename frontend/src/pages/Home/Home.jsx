@@ -1,13 +1,13 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import './Home.css'
 import Chat from '../../components/Chat/Chat'
+import Diagram from '../../components/Diagram/Diagram'
 import InputArea from '../../components/InputArea/InputArea'
 import SolutionSteps from '../../components/SolutionSteps/SolutionSteps'
 import { initialLearningProgress, learningProgressReducer } from './learningProgress'
+import { EMPTY_DIAGRAM, normalizeSolutionResponse } from './solutionResponse'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
-const MIN_SOLUTION_STEPS = 4
-const MAX_SOLUTION_STEPS = 6
 
 async function postJson(path, body, signal) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -25,19 +25,12 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0
 }
 
-function hasValidSolutionSteps(steps) {
-  return (
-    Array.isArray(steps) &&
-    steps.length >= MIN_SOLUTION_STEPS &&
-    steps.length <= MAX_SOLUTION_STEPS &&
-    steps.every(isNonEmptyString)
-  )
-}
-
 function Home({ initialSteps }) {
   const [question, setQuestion] = useState('')
   const [detailQuestion, setDetailQuestion] = useState('')
   const [solutionSteps, setSolutionSteps] = useState(initialSteps)
+  const [calculationSteps, setCalculationSteps] = useState([])
+  const [diagram, setDiagram] = useState(EMPTY_DIAGRAM)
   const [messages, setMessages] = useState([])
   const [loadingAction, setLoadingAction] = useState(null)
   const [error, setError] = useState('')
@@ -75,6 +68,8 @@ function Home({ initialSteps }) {
     activeRequest.current = null
     setDetailQuestion('')
     setSolutionSteps(initialSteps)
+    setCalculationSteps([])
+    setDiagram(EMPTY_DIAGRAM)
     setMessages([])
     setLoadingAction(null)
     setError('')
@@ -94,17 +89,15 @@ function Home({ initialSteps }) {
     try {
       const data = await postJson('/chat', { question: normalizedQuestion }, request.signal)
       if (activeRequest.current !== request) return
-      if (
-        !hasValidSolutionSteps(data.steps) ||
-        !isNonEmptyString(data.hint)
-      ) {
-        throw new Error('Invalid solution response')
-      }
+      const solution = normalizeSolutionResponse(data)
+      if (solution === null) throw new Error('Invalid solution response')
 
-      setSolutionSteps(data.steps.map((step) => step.trim()))
+      setSolutionSteps(solution.steps)
+      setCalculationSteps(solution.calculationSteps)
+      setDiagram(solution.diagram)
       setMessages([
         nextMessage('user', normalizedQuestion),
-        nextMessage('assistant', data.hint.trim()),
+        nextMessage('assistant', solution.hint),
       ])
       dispatchProgress({ type: 'start' })
     } catch (requestError) {
@@ -226,14 +219,7 @@ function Home({ initialSteps }) {
 
       <div className="home__workspace">
         <SolutionSteps steps={solutionSteps} currentStep={progress.currentStep} />
-
-        <section className="home__panel home__diagram" aria-labelledby="diagram-title">
-          <div className="home__section-heading">
-            <p className="home__eyebrow">図・途中式</p>
-            <h2 id="diagram-title">考え方を可視化</h2>
-          </div>
-          <p className="home__placeholder">図や途中式が表示されます。</p>
-        </section>
+        <Diagram calculationSteps={calculationSteps} diagram={diagram} />
       </div>
 
       <Chat messages={messages} />
