@@ -81,7 +81,7 @@ python -m uvicorn main:app --reload
 
 - Swagger UI: http://127.0.0.1:8000/docs
 
-`POST /chat`は数学の問題を受け取り、Gemini APIで生成した解法ステップと最初のヒントを返します。利用には有効な`GEMINI_API_KEY`が必要です。
+`POST /api/chat`は数学の問題を受け取り、Gemini APIで生成した解法ステップと最初のヒントを返します。利用には有効な`GEMINI_API_KEY`が必要です。
 
 サーバーを終了するときは`Ctrl + C`を押します。その後、仮想環境を終了する場合は次を実行します。
 
@@ -109,16 +109,16 @@ npm run build
 - 問題・詳細質問の入力欄と各種ボタンのUI
 - サンプルの解法ステップとチャット表示
 - サイドバーのボタン、オーバーレイ、Escapeキーによる開閉
-- FastAPIの`POST /chat`
+- FastAPIの`POST /api/chat`
 - Gemini APIによる解法ステップと最初のヒントの生成
 
-現時点では、Frontendの送信ボタンとBackend APIは接続されていません。
+Frontendの送信ボタンはBackend APIへ接続され、`/api`配下のエンドポイントへリクエストを送信します。
 
 ## 開発中の機能
 
 次の機能はレビュー待ちであり、`main`へマージされるまでは実装済みとして扱いません。
 
-- Backendの`POST /chat`自動テスト（`test/backend-chat`）
+- Backendの`POST /api/chat`自動テスト（`test/backend-chat`）
 - 段階的なヒント機能（`feat/more_hint`）
 - 会話履歴機能（`feat/talk_history`）
 

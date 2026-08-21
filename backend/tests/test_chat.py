@@ -27,7 +27,7 @@ def test_chat_returns_calculation_steps_and_diagram(monkeypatch, diagram):
     }
     monkeypatch.setattr(main, "generate_solution", lambda _question: solution)
 
-    response = client.post("/chat", json={"question": "2x + 5 = 17"})
+    response = client.post("/api/chat", json={"question": "2x + 5 = 17"})
 
     assert response.status_code == 200
     assert response.json() == solution
