@@ -128,9 +128,10 @@ def generate_solution(question: str) -> dict[str, object]:
             raise ValueError("Gemini API returned an invalid diagram type")
         if diagram_data is not None and not isinstance(diagram_data, dict):
             raise ValueError("Gemini API returned invalid diagram data")
-        if not diagram_needed and (
-            diagram_type is not None or diagram_data is not None
-        ):
+        if diagram_needed:
+            if diagram_type is None or diagram_data is None:
+                raise ValueError("Gemini API returned incomplete diagram data")
+        elif diagram_type is not None or diagram_data is not None:
             raise ValueError("Gemini API returned unnecessary diagram data")
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
         raise RuntimeError("Gemini API returned an invalid solution") from error

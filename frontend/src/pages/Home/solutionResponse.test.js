@@ -58,3 +58,15 @@ test('図が不要な場合の余分な図形データを拒否する', () => {
 
   assert.equal(result, null)
 })
+
+test('図が必要な場合にtypeまたはdataが欠けたレスポンスを拒否する', () => {
+  const incompleteDiagrams = [
+    { needed: true, type: null, data: {} },
+    { needed: true, type: 'coordinate-plane', data: null },
+  ]
+
+  for (const diagram of incompleteDiagrams) {
+    const result = normalizeSolutionResponse({ ...baseResponse, diagram })
+    assert.equal(result, null)
+  }
+})

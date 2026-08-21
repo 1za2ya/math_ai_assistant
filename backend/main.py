@@ -24,8 +24,11 @@ class DiagramResponse(BaseModel):
     data: dict[str, object] | None
 
     @model_validator(mode="after")
-    def validate_optional_data(self):
-        if not self.needed and (self.type is not None or self.data is not None):
+    def validate_data_consistency(self):
+        if self.needed:
+            if self.type is None or self.data is None:
+                raise ValueError("type and data are required when diagram is needed")
+        elif self.type is not None or self.data is not None:
             raise ValueError("type and data must be null when diagram is not needed")
         return self
 

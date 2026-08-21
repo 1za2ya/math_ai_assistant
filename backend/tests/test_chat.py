@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 import main
 
@@ -31,3 +32,16 @@ def test_chat_returns_calculation_steps_and_diagram(monkeypatch, diagram):
     assert response.status_code == 200
     assert response.json() == solution
     assert isinstance(response.json()["calculation_steps"], list)
+
+
+@pytest.mark.parametrize(
+    "diagram",
+    [
+        {"needed": True, "type": None, "data": {}},
+        {"needed": True, "type": "coordinate-plane", "data": None},
+        {"needed": False, "type": "coordinate-plane", "data": {}},
+    ],
+)
+def test_diagram_response_rejects_inconsistent_data(diagram):
+    with pytest.raises(ValidationError):
+        main.DiagramResponse(**diagram)

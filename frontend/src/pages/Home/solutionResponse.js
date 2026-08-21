@@ -28,7 +28,11 @@ function normalizeDiagram(value) {
   }
 
   const type = value.type?.trim() ?? null
-  if (!value.needed && (type !== null || value.data !== null)) return null
+  if (value.needed) {
+    if (type === null || value.data === null) return null
+  } else if (type !== null || value.data !== null) {
+    return null
+  }
 
   return { needed: value.needed, type, data: value.data }
 }

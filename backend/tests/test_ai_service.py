@@ -78,6 +78,14 @@ def test_generate_solution_keeps_diagram_data_when_needed(monkeypatch):
             ["2x + 5 = 17"],
             {"needed": False, "type": "coordinate-plane", "data": {}},
         ),
+        (
+            ["2x + 5 = 17"],
+            {"needed": True, "type": None, "data": {}},
+        ),
+        (
+            ["2x + 5 = 17"],
+            {"needed": True, "type": "coordinate-plane", "data": None},
+        ),
     ],
 )
 def test_generate_solution_rejects_inconsistent_visual_data(
