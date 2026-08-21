@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from google.genai import _transformers
 
 import ai_service
 
@@ -18,6 +19,19 @@ class ModelsStub:
 class ClientStub:
     def __init__(self, response_text):
         self.models = ModelsStub(response_text)
+
+
+def test_solution_schema_is_supported_by_gemini_sdk():
+    client = ai_service.genai.Client(api_key="test-key")
+
+    try:
+        converted_schema = _transformers.t_schema(
+            client._api_client, ai_service.SOLUTION_SCHEMA
+        )
+    finally:
+        client.close()
+
+    assert converted_schema is not None
 
 
 def test_generate_solution_normalizes_structured_response(monkeypatch):
@@ -53,7 +67,11 @@ def test_generate_solution_keeps_diagram_data_when_needed(monkeypatch):
             "diagram": {
                 "needed": True,
                 "type": "coordinate-plane",
-                "data": {"points": [{"label": "A", "x": 0, "y": 0}]},
+                "data": {
+                    "points": [{"label": "A", "x": 0, "y": 0}],
+                    "segments": [],
+                    "expressions": [],
+                },
             },
         }
     )
@@ -66,7 +84,11 @@ def test_generate_solution_keeps_diagram_data_when_needed(monkeypatch):
     assert solution["diagram"] == {
         "needed": True,
         "type": "coordinate-plane",
-        "data": {"points": [{"label": "A", "x": 0, "y": 0}]},
+        "data": {
+            "points": [{"label": "A", "x": 0, "y": 0}],
+            "segments": [],
+            "expressions": [],
+        },
     }
 
 
@@ -85,6 +107,26 @@ def test_generate_solution_keeps_diagram_data_when_needed(monkeypatch):
         (
             ["2x + 5 = 17"],
             {"needed": True, "type": "coordinate-plane", "data": None},
+        ),
+        (
+            ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {"points": [], "segments": [], "expressions": []},
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {"points": [{"label": "A", "x": 0, "y": 0}]},
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
+            {"needed": False, "type": None, "data": None, "extra": "value"},
         ),
     ],
 )

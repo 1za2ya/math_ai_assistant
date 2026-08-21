@@ -18,6 +18,44 @@ from prompt import (
 load_dotenv(Path(__file__).with_name(".env"))
 
 MODEL = "gemini-3.6-flash"
+SOLUTION_FIELDS = ("steps", "hint", "calculation_steps", "diagram")
+DIAGRAM_FIELDS = ("needed", "type", "data")
+DIAGRAM_DATA_FIELDS = ("points", "segments", "expressions")
+
+DIAGRAM_DATA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "points": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {"type": "string"},
+                    "x": {"type": "number", "nullable": True},
+                    "y": {"type": "number", "nullable": True},
+                },
+                "required": ["label", "x", "y"],
+            },
+        },
+        "segments": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "from": {"type": "string"},
+                    "to": {"type": "string"},
+                    "label": {"type": "string", "nullable": True},
+                },
+                "required": ["from", "to", "label"],
+            },
+        },
+        "expressions": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+    "required": list(DIAGRAM_DATA_FIELDS),
+}
 
 SOLUTION_SCHEMA = {
     "type": "object",
@@ -38,18 +76,13 @@ SOLUTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "needed": {"type": "boolean"},
-                "type": {"type": ["string", "null"]},
-                "data": {
-                    "type": ["object", "null"],
-                    "additionalProperties": True,
-                },
+                "type": {"type": "string", "nullable": True},
+                "data": {**DIAGRAM_DATA_SCHEMA, "nullable": True},
             },
-            "required": ["needed", "type", "data"],
-            "additionalProperties": False,
+            "required": list(DIAGRAM_FIELDS),
         },
     },
-    "required": ["steps", "hint", "calculation_steps", "diagram"],
-    "additionalProperties": False,
+    "required": list(SOLUTION_FIELDS),
 }
 
 
@@ -94,6 +127,48 @@ def _normalize_text_list(value: object, field_name: str) -> list[str]:
     return [item.strip() for item in value]
 
 
+def _normalize_diagram_data(value: object) -> dict[str, object]:
+    if not isinstance(value, dict) or set(value) != set(DIAGRAM_DATA_FIELDS):
+        raise ValueError("Gemini API returned invalid diagram data fields")
+
+    points = value["points"]
+    segments = value["segments"]
+    expressions = value["expressions"]
+    if not all(isinstance(items, list) for items in (points, segments, expressions)):
+        raise ValueError("Gemini API returned invalid diagram data")
+    if not points and not segments and not expressions:
+        raise ValueError("Gemini API returned empty diagram data")
+
+    for point in points:
+        if not isinstance(point, dict) or set(point) != {"label", "x", "y"}:
+            raise ValueError("Gemini API returned an invalid diagram point")
+        if not isinstance(point["label"], str) or not point["label"].strip():
+            raise ValueError("Gemini API returned an invalid diagram point label")
+        for coordinate in (point["x"], point["y"]):
+            if coordinate is not None and (
+                not isinstance(coordinate, (int, float)) or isinstance(coordinate, bool)
+            ):
+                raise ValueError("Gemini API returned an invalid diagram coordinate")
+
+    for segment in segments:
+        if not isinstance(segment, dict) or set(segment) != {"from", "to", "label"}:
+            raise ValueError("Gemini API returned an invalid diagram segment")
+        if not all(
+            isinstance(segment[field], str) and segment[field].strip()
+            for field in ("from", "to")
+        ):
+            raise ValueError("Gemini API returned invalid diagram segment endpoints")
+        if segment["label"] is not None and (
+            not isinstance(segment["label"], str) or not segment["label"].strip()
+        ):
+            raise ValueError("Gemini API returned an invalid diagram segment label")
+
+    if not all(isinstance(item, str) and item.strip() for item in expressions):
+        raise ValueError("Gemini API returned invalid diagram expressions")
+
+    return value
+
+
 def generate_solution(question: str) -> dict[str, object]:
     response_text = _generate_text(
         contents=question,
@@ -103,6 +178,9 @@ def generate_solution(question: str) -> dict[str, object]:
 
     try:
         solution = json.loads(response_text)
+        if not isinstance(solution, dict) or set(solution) != set(SOLUTION_FIELDS):
+            raise ValueError("Gemini API returned invalid solution fields")
+
         steps = _normalize_text_list(solution["steps"], "steps")
         hint = solution["hint"]
         calculation_steps = _normalize_text_list(
@@ -116,6 +194,8 @@ def generate_solution(question: str) -> dict[str, object]:
             raise ValueError("Gemini API returned an invalid hint")
         if not isinstance(diagram, dict):
             raise ValueError("Gemini API returned an invalid diagram")
+        if set(diagram) != set(DIAGRAM_FIELDS):
+            raise ValueError("Gemini API returned invalid diagram fields")
 
         diagram_needed = diagram["needed"]
         diagram_type = diagram["type"]
@@ -126,11 +206,10 @@ def generate_solution(question: str) -> dict[str, object]:
             not isinstance(diagram_type, str) or not diagram_type.strip()
         ):
             raise ValueError("Gemini API returned an invalid diagram type")
-        if diagram_data is not None and not isinstance(diagram_data, dict):
-            raise ValueError("Gemini API returned invalid diagram data")
         if diagram_needed:
             if diagram_type is None or diagram_data is None:
                 raise ValueError("Gemini API returned incomplete diagram data")
+            diagram_data = _normalize_diagram_data(diagram_data)
         elif diagram_type is not None or diagram_data is not None:
             raise ValueError("Gemini API returned unnecessary diagram data")
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
