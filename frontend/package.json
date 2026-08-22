@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/pages/Home/*.test.js",
+    "test": "node --test src/pages/Home/*.test.js src/components/Diagram/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

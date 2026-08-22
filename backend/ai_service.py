@@ -7,6 +7,7 @@ from google import genai
 from google.genai import types
 
 from constants import MIN_STEPS, MAX_STEPS
+from diagram_schema import normalize_diagram_data
 from prompt import (
     MATH_HINT_INSTRUCTIONS,
     STEP_DETAIL_INSTRUCTIONS,
@@ -127,48 +128,6 @@ def _normalize_text_list(value: object, field_name: str) -> list[str]:
     return [item.strip() for item in value]
 
 
-def _normalize_diagram_data(value: object) -> dict[str, object]:
-    if not isinstance(value, dict) or set(value) != set(DIAGRAM_DATA_FIELDS):
-        raise ValueError("Gemini API returned invalid diagram data fields")
-
-    points = value["points"]
-    segments = value["segments"]
-    expressions = value["expressions"]
-    if not all(isinstance(items, list) for items in (points, segments, expressions)):
-        raise ValueError("Gemini API returned invalid diagram data")
-    if not points and not segments and not expressions:
-        raise ValueError("Gemini API returned empty diagram data")
-
-    for point in points:
-        if not isinstance(point, dict) or set(point) != {"label", "x", "y"}:
-            raise ValueError("Gemini API returned an invalid diagram point")
-        if not isinstance(point["label"], str) or not point["label"].strip():
-            raise ValueError("Gemini API returned an invalid diagram point label")
-        for coordinate in (point["x"], point["y"]):
-            if coordinate is not None and (
-                not isinstance(coordinate, (int, float)) or isinstance(coordinate, bool)
-            ):
-                raise ValueError("Gemini API returned an invalid diagram coordinate")
-
-    for segment in segments:
-        if not isinstance(segment, dict) or set(segment) != {"from", "to", "label"}:
-            raise ValueError("Gemini API returned an invalid diagram segment")
-        if not all(
-            isinstance(segment[field], str) and segment[field].strip()
-            for field in ("from", "to")
-        ):
-            raise ValueError("Gemini API returned invalid diagram segment endpoints")
-        if segment["label"] is not None and (
-            not isinstance(segment["label"], str) or not segment["label"].strip()
-        ):
-            raise ValueError("Gemini API returned an invalid diagram segment label")
-
-    if not all(isinstance(item, str) and item.strip() for item in expressions):
-        raise ValueError("Gemini API returned invalid diagram expressions")
-
-    return value
-
-
 def generate_solution(question: str) -> dict[str, object]:
     response_text = _generate_text(
         contents=question,
@@ -209,7 +168,7 @@ def generate_solution(question: str) -> dict[str, object]:
         if diagram_needed:
             if diagram_type is None or diagram_data is None:
                 raise ValueError("Gemini API returned incomplete diagram data")
-            diagram_data = _normalize_diagram_data(diagram_data)
+            diagram_data = normalize_diagram_data(diagram_data)
         elif diagram_type is not None or diagram_data is not None:
             raise ValueError("Gemini API returned unnecessary diagram data")
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:

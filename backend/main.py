@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from ai_service import generate_solution, generate_step_detail, generate_step_hint
 from constants import MAX_STEPS, MIN_STEPS
+from diagram_schema import DiagramResponse
 
 logger = logging.getLogger(__name__)
 
@@ -17,21 +18,6 @@ NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_lengt
 
 class ChatRequest(BaseModel):
     question: NonEmptyText
-
-
-class DiagramResponse(BaseModel):
-    needed: bool = Field(strict=True)
-    type: NonEmptyText | None
-    data: dict[str, object] | None
-
-    @model_validator(mode="after")
-    def validate_data_consistency(self):
-        if self.needed:
-            if self.type is None or self.data is None:
-                raise ValueError("type and data are required when diagram is needed")
-        elif self.type is not None or self.data is not None:
-            raise ValueError("type and data must be null when diagram is not needed")
-        return self
 
 
 class ChatResponse(BaseModel):
