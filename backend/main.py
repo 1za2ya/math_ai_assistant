@@ -12,6 +12,7 @@ from learning_record_service import LearningRecordService
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+api_router = APIRouter(prefix="/api")
 learning_record_service = LearningRecordService()
 api_router = APIRouter(prefix="/api")
 
@@ -122,7 +123,7 @@ def step_detail(request: StepDetailRequest) -> StepDetailResponse:
     )
 
 
-@app.post(
+@api_router.post(
     "/learning-records",
     response_model=LearningRecordResponse,
     status_code=status.HTTP_201_CREATED,
@@ -131,4 +132,9 @@ def create_learning_record(
     request: LearningRecordCreate,
 ) -> LearningRecordResponse:
     return learning_record_service.create(request)
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 62c22a5 (feat: refactor API routes to use a centralized router and update tests for new endpoints)
 app.include_router(api_router)

@@ -25,7 +25,7 @@ def test_create_learning_record(learning_record_service):
         "hint_count": 3,
     }
 
-    response = client.post("/learning-records", json=payload)
+    response = client.post("/api/learning-records", json=payload)
 
     assert response.status_code == 201
     body = response.json()
@@ -39,7 +39,7 @@ def test_create_learning_record(learning_record_service):
 
 def test_stored_learning_record_cannot_be_modified(learning_record_service):
     response = client.post(
-        "/learning-records",
+        "/api/learning-records",
         json={
             "question": "2x+3=7",
             "user_marked_understood": True,
@@ -56,7 +56,7 @@ def test_stored_learning_record_cannot_be_modified(learning_record_service):
 
 def test_learning_record_rejects_empty_question(learning_record_service):
     response = client.post(
-        "/learning-records",
+        "/api/learning-records",
         json={
             "question": "   ",
             "user_marked_understood": True,
@@ -71,7 +71,7 @@ def test_learning_record_rejects_empty_question(learning_record_service):
 
 def test_learning_record_rejects_negative_current_step():
     response = client.post(
-        "/learning-records",
+        "/api/learning-records",
         json={
             "question": "2x+3=7",
             "user_marked_understood": True,
@@ -85,7 +85,7 @@ def test_learning_record_rejects_negative_current_step():
 
 def test_learning_record_rejects_negative_hint_count():
     response = client.post(
-        "/learning-records",
+        "/api/learning-records",
         json={
             "question": "2x+3=7",
             "user_marked_understood": True,
@@ -102,7 +102,7 @@ def test_learning_record_preserves_user_self_report(
     user_marked_understood, learning_record_service
 ):
     response = client.post(
-        "/learning-records",
+        "/api/learning-records",
         json={
             "question": "2x+3=7",
             "user_marked_understood": user_marked_understood,
