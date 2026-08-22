@@ -6,10 +6,14 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from ai_service import generate_solution, generate_step_detail, generate_step_hint
 from constants import MAX_STEPS, MIN_STEPS
+from learning_record_schemas import LearningRecordCreate, LearningRecordResponse
+from learning_record_service import LearningRecordService
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+api_router = APIRouter(prefix="/api")
+learning_record_service = LearningRecordService()
 api_router = APIRouter(prefix="/api")
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -119,4 +123,18 @@ def step_detail(request: StepDetailRequest) -> StepDetailResponse:
     )
 
 
+@api_router.post(
+    "/learning-records",
+    response_model=LearningRecordResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_learning_record(
+    request: LearningRecordCreate,
+) -> LearningRecordResponse:
+    return learning_record_service.create(request)
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 62c22a5 (feat: refactor API routes to use a centralized router and update tests for new endpoints)
 app.include_router(api_router)
