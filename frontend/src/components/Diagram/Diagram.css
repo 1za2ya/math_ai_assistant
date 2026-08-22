@@ -67,12 +67,92 @@
   border-radius: 8px;
 }
 
-.diagram__visual p {
+.diagram__canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.diagram__grid line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.diagram__axes line {
+  stroke: var(--color-text-secondary);
+  stroke-width: 1.5;
+}
+
+.diagram__tick-labels,
+.diagram__segments text,
+.diagram__points text {
+  font-family: inherit;
+  font-size: 13px;
+  fill: var(--color-text-secondary);
+}
+
+.diagram__tick-labels text {
+  text-anchor: middle;
+}
+
+.diagram__segments line {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.diagram__segments text,
+.diagram__points text {
+  font-weight: 700;
+  fill: var(--color-text-primary);
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.diagram__points circle {
+  fill: var(--color-primary);
+  stroke: var(--color-surface);
+  stroke-width: 2;
+}
+
+.diagram__notice {
   margin: 0;
+  color: var(--color-text-muted);
+}
+
+.diagram__expressions {
+  margin-top: 12px;
+}
+
+.diagram__expressions h4 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.diagram__expressions ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 22px;
+  margin: 0;
+}
+
+.diagram__expressions li {
+  color: var(--color-text-primary);
 }
 
 @media (max-width: 720px) {
   .diagram {
     padding: 16px;
+  }
+
+  .diagram__visual {
+    padding: 8px;
   }
 }

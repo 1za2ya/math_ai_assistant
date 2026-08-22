@@ -126,6 +126,45 @@ def test_generate_solution_keeps_diagram_data_when_needed(monkeypatch):
         ),
         (
             ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {
+                    "points": [
+                        {"label": "A", "x": 0, "y": 0},
+                        {"label": "A", "x": 1, "y": 1},
+                    ],
+                    "segments": [],
+                    "expressions": [],
+                },
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {
+                    "points": [{"label": "A", "x": 0, "y": 0}],
+                    "segments": [{"from": "A", "to": "B", "label": None}],
+                    "expressions": [],
+                },
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {
+                    "points": [{"label": "A", "x": float("inf"), "y": 0}],
+                    "segments": [],
+                    "expressions": [],
+                },
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
             {"needed": False, "type": None, "data": None, "extra": "value"},
         ),
     ],
