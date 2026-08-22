@@ -132,9 +132,6 @@ def create_learning_record(
     request: LearningRecordCreate,
 ) -> LearningRecordResponse:
     return learning_record_service.create(request)
-<<<<<<< HEAD
-=======
 
 
->>>>>>> 62c22a5 (feat: refactor API routes to use a centralized router and update tests for new endpoints)
 app.include_router(api_router)

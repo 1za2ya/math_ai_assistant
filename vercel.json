@@ -1,32 +1,4 @@
 {
-<<<<<<< HEAD
-    "services": {
-        "frontend": {
-            "root": "frontend",
-            "framework": "vite"
-        },
-        "backend": {
-            "root": "backend",
-            "entrypoint": "main:app"
-        }
-    },
-    "rewrites": [
-        {
-            "source": "/api(/.*)?",
-            "destination": {
-                "type": "service",
-                "service": "backend"
-            }
-        },
-        {
-            "source": "/(.*)",
-            "destination": {
-                "type": "service",
-                "service": "frontend"
-            }
-        }
-    ]
-=======
   "services": {
     "frontend": {
       "root": "frontend",
@@ -53,5 +25,4 @@
       }
     }
   ]
->>>>>>> 62c22a5 (feat: refactor API routes to use a centralized router and update tests for new endpoints)
 }
