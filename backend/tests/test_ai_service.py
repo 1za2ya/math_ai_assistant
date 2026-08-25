@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from google.genai import _transformers
 
 import ai_service
 
@@ -27,22 +28,142 @@ def configure_client(monkeypatch, response_text):
     return client
 
 
+def solution_payload(**overrides):
+    payload = {
+        "steps": ["条件を整理する", "式を立てる", "式を解く", "確認する"],
+        "hint": "最初に条件を整理してみましょう。",
+        "calculation_steps": ["2x + 5 = 17", "2x = 12"],
+        "diagram": {"needed": False, "type": None, "data": None},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_solution_schema_is_supported_by_gemini_sdk():
+    client = ai_service.genai.Client(api_key="test-key")
+
+    try:
+        converted_schema = _transformers.t_schema(
+            client._api_client, ai_service.SOLUTION_SCHEMA
+        )
+    finally:
+        client.close()
+
+    assert converted_schema is not None
+
+
 def test_generate_solution_normalizes_structured_response(monkeypatch):
     response_text = json.dumps(
-        {
-            "steps": [" 条件を整理する ", " 式を立てる ", " 式を解く ", " 確認する "],
-            "hint": " 最初に条件を整理してみましょう。 ",
-        }
+        solution_payload(
+            steps=[" 条件を整理する ", " 式を立てる ", " 式を解く ", " 確認する "],
+            hint=" 最初に条件を整理してみましょう。 ",
+            calculation_steps=[" 2x + 5 = 17 ", " 2x = 12 "],
+        )
     )
     client = configure_client(monkeypatch, response_text)
 
     solution = ai_service.generate_solution("2x + 5 = 17")
 
-    assert solution == {
-        "steps": ["条件を整理する", "式を立てる", "式を解く", "確認する"],
-        "hint": "最初に条件を整理してみましょう。",
-    }
+    assert solution == solution_payload()
     assert client.models.last_request["config"].response_mime_type == "application/json"
+
+
+def test_generate_solution_passes_history_to_gemini(monkeypatch):
+    client = configure_client(monkeypatch, json.dumps(solution_payload()))
+    history = [
+        {"role": "user", "content": "この式の意味を知りたい"},
+        {"role": "assistant", "content": "まず等号の両側を確認しましょう。"},
+    ]
+
+    ai_service.generate_solution("2x + 5 = 17", history)
+
+    contents = client.models.last_request["contents"]
+    assert [content.role for content in contents] == ["user", "model", "user"]
+    assert contents[0].parts[0].text == history[0]["content"]
+    assert contents[1].parts[0].text == history[1]["content"]
+    assert contents[2].parts[0].text == "2x + 5 = 17"
+
+
+def test_generate_solution_keeps_diagram_data_when_needed(monkeypatch):
+    diagram = {
+        "needed": True,
+        "type": "coordinate-plane",
+        "data": {
+            "points": [{"label": "A", "x": 0, "y": 0}],
+            "segments": [],
+            "expressions": [],
+        },
+    }
+    configure_client(
+        monkeypatch,
+        json.dumps(
+            solution_payload(
+                steps=["条件を整理する", "座標を置く", "式を立てる", "確認する"],
+                hint="まず点の位置を図に置いてみましょう。",
+                calculation_steps=["A(0, 0)", "B(4, 0)"],
+                diagram=diagram,
+            )
+        ),
+    )
+
+    solution = ai_service.generate_solution("点Aを座標平面に表してください")
+
+    assert solution["diagram"] == diagram
+
+
+@pytest.mark.parametrize(
+    ("calculation_steps", "diagram"),
+    [
+        ([], {"needed": False, "type": None, "data": None}),
+        (
+            ["2x + 5 = 17"],
+            {"needed": False, "type": "coordinate-plane", "data": {}},
+        ),
+        (
+            ["2x + 5 = 17"],
+            {"needed": True, "type": None, "data": {}},
+        ),
+        (
+            ["2x + 5 = 17"],
+            {"needed": True, "type": "coordinate-plane", "data": None},
+        ),
+        (
+            ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {"points": [], "segments": [], "expressions": []},
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
+            {
+                "needed": True,
+                "type": "coordinate-plane",
+                "data": {"points": [{"label": "A", "x": 0, "y": 0}]},
+            },
+        ),
+        (
+            ["2x + 5 = 17"],
+            {"needed": False, "type": None, "data": None, "extra": "value"},
+        ),
+    ],
+)
+def test_generate_solution_rejects_inconsistent_visual_data(
+    monkeypatch, calculation_steps, diagram
+):
+    configure_client(
+        monkeypatch,
+        json.dumps(
+            solution_payload(
+                calculation_steps=calculation_steps,
+                diagram=diagram,
+            )
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="invalid solution"):
+        ai_service.generate_solution("2x + 5 = 17")
 
 
 def test_generate_step_hint_passes_history_and_selected_step(monkeypatch):

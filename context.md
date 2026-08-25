@@ -41,7 +41,7 @@ AIは答えを直接表示しない。
 
 ## AI
 
-- OpenAI API
+- Google Gemini API
 
 ---
 

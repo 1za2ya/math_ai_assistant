@@ -22,7 +22,7 @@ def test_step_hint_returns_hint_with_history(monkeypatch):
     monkeypatch.setattr(main, "generate_step_hint", generate_step_hint_stub)
 
     response = client.post(
-        "/hint",
+        "/api/hint",
         json={
             "question": "2x + 5 = 17",
             "steps": STEPS,
@@ -38,9 +38,24 @@ def test_step_hint_returns_hint_with_history(monkeypatch):
     }
 
 
+def test_step_hint_succeeds_without_history(monkeypatch):
+    def generate_step_hint_stub(question, steps, current_step, history):
+        assert history == []
+        return "式の両辺に同じ操作をするとどうなるでしょうか？"
+
+    monkeypatch.setattr(main, "generate_step_hint", generate_step_hint_stub)
+
+    response = client.post(
+        "/api/hint",
+        json={"question": "2x + 5 = 17", "steps": STEPS, "current_step": 1},
+    )
+
+    assert response.status_code == 200
+
+
 def test_step_hint_rejects_negative_current_step():
     response = client.post(
-        "/hint",
+        "/api/hint",
         json={"question": "2x + 5 = 17", "steps": STEPS, "current_step": -1},
     )
 
@@ -49,7 +64,7 @@ def test_step_hint_rejects_negative_current_step():
 
 def test_step_hint_rejects_boolean_current_step():
     response = client.post(
-        "/hint",
+        "/api/hint",
         json={"question": "2x + 5 = 17", "steps": STEPS, "current_step": True},
     )
 
@@ -58,7 +73,7 @@ def test_step_hint_rejects_boolean_current_step():
 
 def test_step_hint_rejects_current_step_outside_steps():
     response = client.post(
-        "/hint",
+        "/api/hint",
         json={
             "question": "2x + 5 = 17",
             "steps": STEPS,
@@ -76,7 +91,7 @@ def test_step_hint_returns_503_when_generation_fails(monkeypatch):
     monkeypatch.setattr(main, "generate_step_hint", fail_generation)
 
     response = client.post(
-        "/hint",
+        "/api/hint",
         json={"question": "2x + 5 = 17", "steps": STEPS, "current_step": 1},
     )
 
@@ -98,7 +113,7 @@ def test_step_detail_keeps_current_step_and_passes_history(monkeypatch):
     monkeypatch.setattr(main, "generate_step_detail", generate_step_detail_stub)
 
     response = client.post(
-        "/detail",
+        "/api/detail",
         json={
             "question": "2x + 5 = 17",
             "steps": STEPS,

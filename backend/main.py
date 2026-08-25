@@ -1,19 +1,27 @@
 import logging
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import APIRouter, FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from ai_service import generate_solution, generate_step_detail, generate_step_hint
 from constants import MAX_HISTORY_MESSAGES, MAX_MESSAGE_LENGTH, MAX_STEPS, MIN_STEPS
+from learning_record_schemas import LearningRecordCreate, LearningRecordResponse
+from learning_record_service import LearningRecordService
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+api_router = APIRouter(prefix="/api")
+learning_record_service = LearningRecordService()
 
 ValidatedText = Annotated[
     str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_LENGTH),
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MAX_MESSAGE_LENGTH,
+    ),
 ]
 
 
@@ -29,9 +37,26 @@ class ChatRequest(BaseModel):
     )
 
 
+class DiagramResponse(BaseModel):
+    needed: bool = Field(strict=True)
+    type: ValidatedText | None
+    data: dict[str, object] | None
+
+    @model_validator(mode="after")
+    def validate_data_consistency(self):
+        if self.needed:
+            if self.type is None or self.data is None:
+                raise ValueError("type and data are required when diagram is needed")
+        elif self.type is not None or self.data is not None:
+            raise ValueError("type and data must be null when diagram is not needed")
+        return self
+
+
 class ChatResponse(BaseModel):
     steps: list[str]
     hint: str
+    calculation_steps: list[ValidatedText] = Field(min_length=1)
+    diagram: DiagramResponse
 
 
 class StepContextRequest(BaseModel):
@@ -80,7 +105,7 @@ def read_root():
     return {"message": "Math AI backend is running"}
 
 
-@app.post("/chat", response_model=ChatResponse)
+@api_router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     try:
         solution = generate_solution(
@@ -92,7 +117,7 @@ def chat(request: ChatRequest) -> ChatResponse:
     return ChatResponse(**solution)
 
 
-@app.post("/hint", response_model=StepHintResponse)
+@api_router.post("/hint", response_model=StepHintResponse)
 def step_hint(request: StepContextRequest) -> StepHintResponse:
     try:
         hint = generate_step_hint(
@@ -107,7 +132,7 @@ def step_hint(request: StepContextRequest) -> StepHintResponse:
     return StepHintResponse(hint=hint, current_step=request.current_step)
 
 
-@app.post("/detail", response_model=StepDetailResponse)
+@api_router.post("/detail", response_model=StepDetailResponse)
 def step_detail(request: StepDetailRequest) -> StepDetailResponse:
     try:
         explanation = generate_step_detail(
@@ -123,3 +148,17 @@ def step_detail(request: StepDetailRequest) -> StepDetailResponse:
     return StepDetailResponse(
         explanation=explanation, current_step=request.current_step
     )
+
+
+@api_router.post(
+    "/learning-records",
+    response_model=LearningRecordResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_learning_record(
+    request: LearningRecordCreate,
+) -> LearningRecordResponse:
+    return learning_record_service.create(request)
+
+
+app.include_router(api_router)
