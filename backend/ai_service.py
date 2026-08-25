@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from constants import MIN_STEPS, MAX_STEPS
+from constants import MAX_STEPS, MIN_STEPS
 from prompt import (
     MATH_HINT_INSTRUCTIONS,
     STEP_DETAIL_INSTRUCTIONS,
@@ -17,7 +17,7 @@ from prompt import (
 
 load_dotenv(Path(__file__).with_name(".env"))
 
-MODEL = "gemini-3.6-flash"
+MODEL = "gemini-2.5-flash"
 SOLUTION_FIELDS = ("steps", "hint", "calculation_steps", "diagram")
 DIAGRAM_FIELDS = ("needed", "type", "data")
 DIAGRAM_DATA_FIELDS = ("points", "segments", "expressions")
@@ -86,8 +86,24 @@ SOLUTION_SCHEMA = {
 }
 
 
+def _build_contents(
+    current_input: str, history: list[dict[str, str]]
+) -> list[types.Content]:
+    contents = [
+        types.Content(
+            role="model" if message["role"] == "assistant" else "user",
+            parts=[types.Part.from_text(text=message["content"])],
+        )
+        for message in history
+    ]
+    contents.append(
+        types.Content(role="user", parts=[types.Part.from_text(text=current_input)])
+    )
+    return contents
+
+
 def _generate_text(
-    contents: str,
+    contents: list[types.Content],
     system_instruction: str,
     response_schema: dict[str, object] | None = None,
 ) -> str:
@@ -109,12 +125,11 @@ def _generate_text(
             contents=contents,
             config=types.GenerateContentConfig(**config),
         )
+        text = response.text.strip() if response.text else ""
+        if not text:
+            raise ValueError("Gemini API returned an empty response")
     except Exception as error:
         raise RuntimeError("Gemini API request failed") from error
-
-    text = response.text.strip() if response.text else ""
-    if not text:
-        raise RuntimeError("Gemini API returned an empty response")
 
     return text
 
@@ -169,9 +184,11 @@ def _normalize_diagram_data(value: object) -> dict[str, object]:
     return value
 
 
-def generate_solution(question: str) -> dict[str, object]:
+def generate_solution(
+    question: str, history: list[dict[str, str]] | None = None
+) -> dict[str, object]:
     response_text = _generate_text(
-        contents=question,
+        contents=_build_contents(question, history or []),
         system_instruction=MATH_HINT_INSTRUCTIONS,
         response_schema=SOLUTION_SCHEMA,
     )
@@ -227,19 +244,33 @@ def generate_solution(question: str) -> dict[str, object]:
     }
 
 
-def generate_step_hint(question: str, steps: list[str], current_step: int) -> str:
+def generate_step_hint(
+    question: str,
+    steps: list[str],
+    current_step: int,
+    history: list[dict[str, str]] | None = None,
+) -> str:
     return _generate_text(
-        contents=build_step_hint_input(question, steps, current_step),
+        contents=_build_contents(
+            build_step_hint_input(question, steps, current_step), history or []
+        ),
         system_instruction=STEP_HINT_INSTRUCTIONS,
     )
 
 
 def generate_step_detail(
-    question: str, steps: list[str], current_step: int, detail_question: str
+    question: str,
+    steps: list[str],
+    current_step: int,
+    detail_question: str,
+    history: list[dict[str, str]] | None = None,
 ) -> str:
     return _generate_text(
-        contents=build_step_detail_input(
-            question, steps, current_step, detail_question
+        contents=_build_contents(
+            build_step_detail_input(
+                question, steps, current_step, detail_question
+            ),
+            history or [],
         ),
         system_instruction=STEP_DETAIL_INSTRUCTIONS,
     )

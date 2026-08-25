@@ -4,6 +4,7 @@ import Chat from '../../components/Chat/Chat'
 import Diagram from '../../components/Diagram/Diagram'
 import InputArea from '../../components/InputArea/InputArea'
 import SolutionSteps from '../../components/SolutionSteps/SolutionSteps'
+import { toApiHistory } from './conversationHistory'
 import { initialLearningProgress, learningProgressReducer } from './learningProgress'
 import { EMPTY_DIAGRAM, normalizeSolutionResponse } from './solutionResponse'
 
@@ -87,7 +88,14 @@ function Home({ initialSteps }) {
 
     const request = beginRequest('problem')
     try {
-      const data = await postJson('/chat', { question: normalizedQuestion }, request.signal)
+      const data = await postJson(
+        '/chat',
+        {
+          question: normalizedQuestion,
+          history: toApiHistory(messages),
+        },
+        request.signal,
+      )
       if (activeRequest.current !== request) return
       const solution = normalizeSolutionResponse(data)
       if (solution === null) throw new Error('Invalid solution response')
@@ -128,6 +136,7 @@ function Home({ initialSteps }) {
           question: question.trim(),
           steps: solutionSteps,
           current_step: nextStep,
+          history: toApiHistory(messages),
         },
         request.signal,
       )
@@ -136,9 +145,12 @@ function Home({ initialSteps }) {
         throw new Error('Invalid hint response')
       }
 
+      const userMessage = nextMessage('user', '次の解法ステップのヒントを教えてください。')
+      const assistantMessage = nextMessage('assistant', data.hint.trim())
       setMessages((currentMessages) => [
         ...currentMessages,
-        nextMessage('assistant', data.hint.trim()),
+        userMessage,
+        assistantMessage,
       ])
       dispatchProgress({ type: 'advance', stepCount: solutionSteps.length })
     } catch (requestError) {
@@ -164,6 +176,7 @@ function Home({ initialSteps }) {
           steps: solutionSteps,
           current_step: requestedStep,
           detail_question: normalizedDetail,
+          history: toApiHistory(messages),
         },
         request.signal,
       )
@@ -172,10 +185,12 @@ function Home({ initialSteps }) {
         throw new Error('Invalid detail response')
       }
 
+      const userMessage = nextMessage('user', normalizedDetail)
+      const assistantMessage = nextMessage('assistant', data.explanation.trim())
       setMessages((currentMessages) => [
         ...currentMessages,
-        nextMessage('user', normalizedDetail),
-        nextMessage('assistant', data.explanation.trim()),
+        userMessage,
+        assistantMessage,
       ])
       setDetailQuestion('')
       dispatchProgress({ type: 'details_received' })

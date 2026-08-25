@@ -1,11 +1,11 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from ai_service import generate_solution, generate_step_detail, generate_step_hint
-from constants import MAX_STEPS, MIN_STEPS
+from constants import MAX_HISTORY_MESSAGES, MAX_MESSAGE_LENGTH, MAX_STEPS, MIN_STEPS
 from learning_record_schemas import LearningRecordCreate, LearningRecordResponse
 from learning_record_service import LearningRecordService
 
@@ -14,18 +14,32 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 learning_record_service = LearningRecordService()
-api_router = APIRouter(prefix="/api")
 
-NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+ValidatedText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MAX_MESSAGE_LENGTH,
+    ),
+]
+
+
+class ConversationMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: ValidatedText
 
 
 class ChatRequest(BaseModel):
-    question: NonEmptyText
+    question: ValidatedText
+    history: list[ConversationMessage] = Field(
+        default_factory=list, max_length=MAX_HISTORY_MESSAGES
+    )
 
 
 class DiagramResponse(BaseModel):
     needed: bool = Field(strict=True)
-    type: NonEmptyText | None
+    type: ValidatedText | None
     data: dict[str, object] | None
 
     @model_validator(mode="after")
@@ -41,14 +55,17 @@ class DiagramResponse(BaseModel):
 class ChatResponse(BaseModel):
     steps: list[str]
     hint: str
-    calculation_steps: list[NonEmptyText] = Field(min_length=1)
+    calculation_steps: list[ValidatedText] = Field(min_length=1)
     diagram: DiagramResponse
 
 
 class StepContextRequest(BaseModel):
-    question: NonEmptyText
-    steps: list[NonEmptyText] = Field(min_length=MIN_STEPS, max_length=MAX_STEPS)
+    question: ValidatedText
+    steps: list[ValidatedText] = Field(min_length=MIN_STEPS, max_length=MAX_STEPS)
     current_step: int = Field(strict=True, ge=0)
+    history: list[ConversationMessage] = Field(
+        default_factory=list, max_length=MAX_HISTORY_MESSAGES
+    )
 
     @model_validator(mode="after")
     def validate_current_step(self):
@@ -63,12 +80,16 @@ class StepHintResponse(BaseModel):
 
 
 class StepDetailRequest(StepContextRequest):
-    detail_question: NonEmptyText
+    detail_question: ValidatedText
 
 
 class StepDetailResponse(BaseModel):
     explanation: str
     current_step: int
+
+
+def _history_as_dicts(history: list[ConversationMessage]) -> list[dict[str, str]]:
+    return [message.model_dump() for message in history]
 
 
 def generation_unavailable() -> HTTPException:
@@ -87,7 +108,9 @@ def read_root():
 @api_router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     try:
-        solution = generate_solution(request.question)
+        solution = generate_solution(
+            request.question, _history_as_dicts(request.history)
+        )
     except RuntimeError:
         raise generation_unavailable() from None
 
@@ -98,7 +121,10 @@ def chat(request: ChatRequest) -> ChatResponse:
 def step_hint(request: StepContextRequest) -> StepHintResponse:
     try:
         hint = generate_step_hint(
-            request.question, request.steps, request.current_step
+            request.question,
+            request.steps,
+            request.current_step,
+            _history_as_dicts(request.history),
         )
     except RuntimeError:
         raise generation_unavailable() from None
@@ -114,6 +140,7 @@ def step_detail(request: StepDetailRequest) -> StepDetailResponse:
             request.steps,
             request.current_step,
             request.detail_question,
+            _history_as_dicts(request.history),
         )
     except RuntimeError:
         raise generation_unavailable() from None
