@@ -54,6 +54,29 @@ test('図が必要なレスポンスの構造化データを保持する', () =>
   })
 })
 
+test('座標不明の点を含む図形データを保持する', () => {
+  const result = normalizeSolutionResponse({
+    ...baseResponse,
+    diagram: {
+      needed: true,
+      type: 'coordinate-plane',
+      data: {
+        points: [
+          { label: 'A', x: 0, y: 0 },
+          { label: 'B', x: null, y: null },
+        ],
+        segments: [{ from: 'A', to: 'B', label: 'AB' }],
+        expressions: [],
+      },
+    },
+  })
+
+  assert.deepEqual(result.diagram.data.points, [
+    { label: 'A', x: 0, y: 0 },
+    { label: 'B', x: null, y: null },
+  ])
+})
+
 test('空の途中式を拒否する', () => {
   const result = normalizeSolutionResponse({
     ...baseResponse,

@@ -92,25 +92,25 @@ export function createCoordinateDiagramModel(data) {
     return null
   }
 
-  const points = data.points.filter(
+  const plottablePoints = data.points.filter(
     (point) => Number.isFinite(point.x) && Number.isFinite(point.y),
   )
-  if (points.length === 0 || points.length !== data.points.length) return null
+  if (plottablePoints.length === 0 && data.expressions.length === 0) return null
 
-  const bounds = createBounds(points)
+  const bounds = createBounds(plottablePoints)
   const scale = createScale(bounds)
   if (!Object.values(bounds).every(Number.isFinite) || !Number.isFinite(scale) || scale <= 0) {
     return null
   }
   const map = createCoordinateMapper(bounds, scale)
-  const mappedPoints = points.map((point) => ({ ...point, ...map(point.x, point.y) }))
+  const mappedPoints = plottablePoints.map((point) => ({ ...point, ...map(point.x, point.y) }))
   const pointsByLabel = new Map(mappedPoints.map((point) => [point.label, point]))
 
   const segments = []
   for (const segment of data.segments) {
     const from = pointsByLabel.get(segment.from)
     const to = pointsByLabel.get(segment.to)
-    if (!from || !to) return null
+    if (!from || !to) continue
 
     segments.push({
       ...segment,

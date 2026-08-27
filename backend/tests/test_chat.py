@@ -76,3 +76,22 @@ def test_diagram_response_rejects_inconsistent_data(diagram):
 def test_diagram_response_rejects_invalid_nested_data(data):
     with pytest.raises(ValidationError):
         main.DiagramResponse(needed=True, type="coordinate-plane", data=data)
+
+
+def test_diagram_response_accepts_partially_unknown_coordinates():
+    diagram = main.DiagramResponse(
+        needed=True,
+        type="coordinate-plane",
+        data={
+            "points": [
+                {"label": "A", "x": 0, "y": 0},
+                {"label": "B", "x": None, "y": None},
+            ],
+            "segments": [{"from": "A", "to": "B", "label": "AB"}],
+            "expressions": [],
+        },
+    )
+
+    assert diagram.data is not None
+    assert diagram.data.points[1].x is None
+    assert diagram.data.points[1].y is None

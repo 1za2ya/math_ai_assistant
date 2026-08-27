@@ -46,17 +46,45 @@ test('数学上の正のy方向をSVG上では上方向へ変換する', () => {
   assert.ok(model.yAxisX > 0 && model.yAxisX < DIAGRAM_VIEWBOX.width)
 })
 
-test('座標がない点を含む場合は不完全な図を描画しない', () => {
+test('座標不明の点とそれを参照する線分だけを描画対象から除外する', () => {
   const model = createCoordinateDiagramModel(
-    createData({ points: [{ label: 'A', x: null, y: null }], segments: [] }),
+    createData({
+      points: [
+        { label: 'A', x: 0, y: 0 },
+        { label: 'B', x: 4, y: 3 },
+        { label: 'C', x: null, y: null },
+      ],
+      segments: [
+        { from: 'A', to: 'B', label: 'AB' },
+        { from: 'B', to: 'C', label: 'BC' },
+      ],
+    }),
   )
 
-  assert.equal(model, null)
+  assert.ok(model)
+  assert.deepEqual(model.points.map((point) => point.label), ['A', 'B'])
+  assert.equal(model.segments.length, 1)
+  assert.equal(model.segments[0].label, 'AB')
 })
 
-test('点がない場合は座標平面を描画しない', () => {
+test('点がなくても式があれば座標平面へ表示する', () => {
   const model = createCoordinateDiagramModel(
     createData({ points: [], segments: [], expressions: ['y = x^2'] }),
+  )
+
+  assert.ok(model)
+  assert.deepEqual(model.points, [])
+  assert.deepEqual(model.segments, [])
+  assert.deepEqual(model.expressions, ['y = x^2'])
+})
+
+test('描画可能な点も式もない場合は座標平面を描画しない', () => {
+  const model = createCoordinateDiagramModel(
+    createData({
+      points: [{ label: 'A', x: null, y: null }],
+      segments: [],
+      expressions: [],
+    }),
   )
 
   assert.equal(model, null)
