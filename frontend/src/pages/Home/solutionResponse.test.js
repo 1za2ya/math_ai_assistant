@@ -29,15 +29,52 @@ test('図が必要なレスポンスの構造化データを保持する', () =>
     diagram: {
       needed: true,
       type: ' coordinate-plane ',
-      data: { points: [{ label: 'A', x: 0, y: 0 }] },
+      data: {
+        points: [
+          { label: ' A ', x: 0, y: 0 },
+          { label: 'B', x: 4, y: 3 },
+        ],
+        segments: [{ from: ' A ', to: 'B', label: ' 5 ' }],
+        expressions: [' y = 3x / 4 '],
+      },
     },
   })
 
   assert.deepEqual(result.diagram, {
     needed: true,
     type: 'coordinate-plane',
-    data: { points: [{ label: 'A', x: 0, y: 0 }] },
+    data: {
+      points: [
+        { label: 'A', x: 0, y: 0 },
+        { label: 'B', x: 4, y: 3 },
+      ],
+      segments: [{ from: 'A', to: 'B', label: '5' }],
+      expressions: ['y = 3x / 4'],
+    },
   })
+})
+
+test('座標不明の点を含む図形データを保持する', () => {
+  const result = normalizeSolutionResponse({
+    ...baseResponse,
+    diagram: {
+      needed: true,
+      type: 'coordinate-plane',
+      data: {
+        points: [
+          { label: 'A', x: 0, y: 0 },
+          { label: 'B', x: null, y: null },
+        ],
+        segments: [{ from: 'A', to: 'B', label: 'AB' }],
+        expressions: [],
+      },
+    },
+  })
+
+  assert.deepEqual(result.diagram.data.points, [
+    { label: 'A', x: 0, y: 0 },
+    { label: 'B', x: null, y: null },
+  ])
 })
 
 test('空の途中式を拒否する', () => {
@@ -67,6 +104,58 @@ test('図が必要な場合にtypeまたはdataが欠けたレスポンスを拒
 
   for (const diagram of incompleteDiagrams) {
     const result = normalizeSolutionResponse({ ...baseResponse, diagram })
+    assert.equal(result, null)
+  }
+})
+
+test('描画に必要な配列が欠けた図形データを拒否する', () => {
+  const result = normalizeSolutionResponse({
+    ...baseResponse,
+    diagram: {
+      needed: true,
+      type: 'coordinate-plane',
+      data: { points: [{ label: 'A', x: 0, y: 0 }] },
+    },
+  })
+
+  assert.equal(result, null)
+})
+
+test('存在しない点を参照する線分を拒否する', () => {
+  const result = normalizeSolutionResponse({
+    ...baseResponse,
+    diagram: {
+      needed: true,
+      type: 'coordinate-plane',
+      data: {
+        points: [{ label: 'A', x: 0, y: 0 }],
+        segments: [{ from: 'A', to: 'B', label: null }],
+        expressions: [],
+      },
+    },
+  })
+
+  assert.equal(result, null)
+})
+
+test('重複ラベルや有限でない座標を拒否する', () => {
+  const invalidPoints = [
+    [
+      { label: 'A', x: 0, y: 0 },
+      { label: 'A', x: 1, y: 1 },
+    ],
+    [{ label: 'A', x: Number.POSITIVE_INFINITY, y: 0 }],
+  ]
+
+  for (const points of invalidPoints) {
+    const result = normalizeSolutionResponse({
+      ...baseResponse,
+      diagram: {
+        needed: true,
+        type: 'coordinate-plane',
+        data: { points, segments: [], expressions: [] },
+      },
+    })
     assert.equal(result, null)
   }
 })

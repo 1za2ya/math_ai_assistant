@@ -14,7 +14,14 @@ client = TestClient(main.app)
         {
             "needed": True,
             "type": "coordinate-plane",
-            "data": {"points": [{"label": "A", "x": 0, "y": 0}]},
+            "data": {
+                "points": [
+                    {"label": "A", "x": 0, "y": 0},
+                    {"label": "B", "x": 2, "y": 1},
+                ],
+                "segments": [{"from": "A", "to": "B", "label": "AB"}],
+                "expressions": [],
+            },
         },
     ],
 )
@@ -45,3 +52,46 @@ def test_chat_returns_calculation_steps_and_diagram(monkeypatch, diagram):
 def test_diagram_response_rejects_inconsistent_data(diagram):
     with pytest.raises(ValidationError):
         main.DiagramResponse(**diagram)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"points": [{"label": "A", "x": 0, "y": 0}]},
+        {
+            "points": [
+                {"label": "A", "x": 0, "y": 0},
+                {"label": "A", "x": 1, "y": 1},
+            ],
+            "segments": [],
+            "expressions": [],
+        },
+        {
+            "points": [{"label": "A", "x": 0, "y": 0}],
+            "segments": [{"from": "A", "to": "B", "label": None}],
+            "expressions": [],
+        },
+    ],
+)
+def test_diagram_response_rejects_invalid_nested_data(data):
+    with pytest.raises(ValidationError):
+        main.DiagramResponse(needed=True, type="coordinate-plane", data=data)
+
+
+def test_diagram_response_accepts_partially_unknown_coordinates():
+    diagram = main.DiagramResponse(
+        needed=True,
+        type="coordinate-plane",
+        data={
+            "points": [
+                {"label": "A", "x": 0, "y": 0},
+                {"label": "B", "x": None, "y": None},
+            ],
+            "segments": [{"from": "A", "to": "B", "label": "AB"}],
+            "expressions": [],
+        },
+    )
+
+    assert diagram.data is not None
+    assert diagram.data.points[1].x is None
+    assert diagram.data.points[1].y is None

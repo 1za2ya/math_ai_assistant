@@ -1,4 +1,5 @@
 import './Diagram.css'
+import DiagramRenderer from './DiagramRenderer'
 
 function Diagram({ calculationSteps, diagram }) {
   return (
@@ -24,9 +25,9 @@ function Diagram({ calculationSteps, diagram }) {
       </div>
 
       {diagram.needed && (
-        <div className="diagram__visual" role="status">
+        <div className="diagram__visual">
           <h3>図形表示</h3>
-          <p>この問題では図を使用します。</p>
+          <DiagramRenderer diagram={diagram} />
         </div>
       )}
     </section>
